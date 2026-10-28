@@ -1,5 +1,6 @@
 import { makeZip } from './zip.mjs';
 import { PAGE_SIZE, MAX_EXPORT, buildPubmedQuery, normalizeSummary, metadataCsv, fileStem, chunks } from './domain.mjs';
+import { PROVIDERS, listModels, generateText, buildAnalysisPrompt } from './ai.mjs';
 
 const NCBI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
 const EPMC = 'https://www.ebi.ac.uk/europepmc/webservices/rest';
@@ -232,6 +233,7 @@ function updateBasket() {
   $('download-fulltext').disabled = size === 0 || state.isExporting;
   $('basket-items').innerHTML = size ? papers.map((p, i) => `<div class="basket-item"><span class="basket-item-index">${String(i + 1).padStart(2, '0')}</span><div><div class="basket-item-title" title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</div><div class="basket-item-meta">${escapeHtml(p.year)} · PMID ${p.pmid}</div></div><button class="basket-item-remove" data-remove="${p.pmid}" title="移除文獻" aria-label="移除 ${escapeHtml(p.title)}">×</button></div>`).join('') : '<p class="basket-empty">尚未選取文獻。<br>點選搜尋結果旁的方框加入清單。</p>';
   if (state.items.length) $('select-page').textContent = state.items.every(p => state.selected.has(p.pmid)) ? '取消全選此頁' : '全選此頁';
+  updateAiScope();
 }
 
 function togglePaper(pmid, checked) {
@@ -474,3 +476,134 @@ $('download-fulltext').addEventListener('click', () => startExport('fulltext'));
 $('cancel-download').addEventListener('click', () => state.exportAbort?.abort());
 $('progress-dialog').addEventListener('cancel', event => { event.preventDefault(); state.exportAbort?.abort(); });
 for (const id of ['close-abstract', 'close-abstract-bottom']) $(id).addEventListener('click', () => $('abstract-dialog').close());
+
+// Provider credentials are explicitly saved per provider in this browser only.
+const AI_STORAGE = 'litfetch.ai.settings.v1';
+let aiSettings = { provider: 'cgu', services: {} };
+try {
+  const saved = JSON.parse(localStorage.getItem(AI_STORAGE) || '{}');
+  if (saved && typeof saved === 'object') aiSettings = { provider: PROVIDERS[saved.provider] ? saved.provider : 'cgu', services: saved.services && typeof saved.services === 'object' ? saved.services : {} };
+} catch { /* Storage may be blocked; settings can still be used in memory. */ }
+let aiConversation = [];
+let aiAbort = null;
+let aiTestAbort = null;
+
+function aiMessage(message, error = false) {
+  $('ai-status').textContent = message;
+  $('ai-status').classList.toggle('error', error);
+}
+function aiSettingsMessage(message, error = false) {
+  $('ai-settings-status').textContent = message;
+  $('ai-settings-status').classList.toggle('error', error);
+}
+function saveAiSettings() {
+  try { localStorage.setItem(AI_STORAGE, JSON.stringify(aiSettings)); return true; }
+  catch { return false; }
+}
+function currentAiConfig() {
+  return { provider: $('ai-provider').value, key: $('ai-key').value.trim(), model: $('ai-model').value.trim() };
+}
+function loadAiProvider() {
+  const saved = aiSettings.services[$('ai-provider').value] || {};
+  $('ai-key').value = typeof saved.key === 'string' ? saved.key : '';
+  $('ai-model').value = typeof saved.model === 'string' ? saved.model : '';
+  $('ai-model-list').replaceChildren(new Option('請先讀取模型', ''));
+  aiSettingsMessage('');
+}
+function updateAiScope() {
+  const count = state.selected.size || state.items.length;
+  $('ai-scope').textContent = count ? `分析範圍：${state.selected.size ? '已選取文獻' : '目前搜尋結果這一頁'} ${count} 篇；送出前會取得可用摘要。` : '尚無文獻：可先描述研究方向，AI 會協助擬定搜尋條件。';
+}
+function renderAiConversation() {
+  const container = $('ai-conversation');
+  container.replaceChildren();
+  if (!aiConversation.length) {
+    const empty = document.createElement('p'); empty.className = 'ai-empty'; empty.textContent = '選取文獻後開始整理，也可以直接輸入研究問題。'; container.append(empty);
+  }
+  for (const message of aiConversation) {
+    const item = document.createElement('div'); item.className = `ai-message ${message.role === 'user' ? 'ai-user' : 'ai-assistant'}`;
+    const label = document.createElement('strong'); label.textContent = message.role === 'user' ? '你的問題' : 'AI 研究助理';
+    const body = document.createElement('div'); body.textContent = message.content;
+    item.append(label, body); container.append(item);
+  }
+  $('ai-download').disabled = !aiConversation.some(message => message.role === 'assistant');
+}
+function setAiBusy(busy) {
+  for (const id of ['ai-analyze', 'ai-send', 'ai-new', 'ai-settings-toggle']) $(id).disabled = busy;
+  $('ai-cancel').hidden = !busy;
+}
+async function askAi(question) {
+  if (aiAbort) return;
+  const config = currentAiConfig();
+  if (!config.key || !config.model) { aiMessage('請先開啟「連接你的 AI」，輸入 API Key 並選擇或輸入模型。', true); $('ai-settings').hidden = false; $('ai-settings-toggle').setAttribute('aria-expanded', 'true'); return; }
+  const papers = [...(state.selected.size ? state.selected.values() : state.items)];
+  const query = state.lastQuery;
+  const controller = new AbortController(); aiAbort = controller; setAiBusy(true);
+  try {
+    aiMessage(`正在取得 ${papers.length} 篇文獻的摘要…`);
+    const missing = papers.filter(p => !state.abstractCache.has(p.pmid));
+    for (const group of chunks(missing, 40)) {
+      const abstracts = await getAbstracts(group.map(p => p.pmid), controller.signal);
+      for (const p of group) state.abstractCache.set(p.pmid, abstracts.get(p.pmid) || '');
+    }
+    const records = papers.map(p => ({ ...p, abstract: state.abstractCache.get(p.pmid) || '' }));
+    const available = records.filter(p => p.abstract).length;
+    const prompt = buildAnalysisPrompt({ query, papers: records, conversation: aiConversation, question });
+    if (prompt.length > 240000) throw new Error('文獻摘要與對話過長，請減少選取篇數或開始新對話。');
+    aiMessage(`已取得 ${available}/${papers.length} 篇摘要，正在傳送給 ${PROVIDERS[config.provider].label} 分析…`);
+    const answer = await generateText({ ...config, prompt, signal: controller.signal });
+    if (controller.signal.aborted) return;
+    aiConversation.push({ role: 'user', content: question }, { role: 'assistant', content: answer });
+    renderAiConversation();
+    aiMessage(`分析完成：使用 ${papers.length} 篇文獻，其中 ${available} 篇有摘要。請核對原文。`);
+    $('ai-question').value = '';
+  } catch (error) {
+    aiMessage(error.name === 'AbortError' ? '已取消分析。' : `分析失敗：${error.message}`, error.name !== 'AbortError');
+  } finally { aiAbort = null; setAiBusy(false); }
+}
+
+$('ai-provider').value = aiSettings.provider;
+loadAiProvider();
+updateAiScope();
+$('ai-settings-toggle').addEventListener('click', () => {
+  $('ai-settings').hidden = !$('ai-settings').hidden;
+  $('ai-settings-toggle').setAttribute('aria-expanded', String(!$('ai-settings').hidden));
+});
+$('ai-provider').addEventListener('change', () => { aiTestAbort?.abort(); loadAiProvider(); });
+$('ai-model-list').addEventListener('change', () => { if ($('ai-model-list').value) $('ai-model').value = $('ai-model-list').value; });
+$('ai-save').addEventListener('click', () => {
+  const { provider, key, model } = currentAiConfig();
+  aiSettings.provider = provider; aiSettings.services[provider] = { key, model };
+  const saved = saveAiSettings();
+  aiSettingsMessage(saved ? '設定已儲存在此瀏覽器。' : '瀏覽器無法儲存設定；目前僅保留在頁面記憶體。', !saved);
+});
+$('ai-clear').addEventListener('click', () => {
+  aiTestAbort?.abort();
+  const provider = $('ai-provider').value;
+  delete aiSettings.services[provider]; $('ai-key').value = ''; $('ai-model').value = '';
+  $('ai-model-list').replaceChildren(new Option('請先讀取模型', ''));
+  aiSettingsMessage(saveAiSettings() ? '已清除此服務儲存的 Key 與模型。' : '無法更新瀏覽器儲存空間，請檢查瀏覽器設定。');
+});
+$('ai-test').addEventListener('click', async () => {
+  if (aiTestAbort) return;
+  const { provider, key, model } = currentAiConfig();
+  if (!key) { aiSettingsMessage('請先輸入 API Key。', true); return; }
+  const controller = new AbortController(); aiTestAbort = controller; $('ai-test').disabled = true; aiSettingsMessage('正在連線並讀取模型清單…');
+  try {
+    const models = await listModels(provider, key, controller.signal);
+    if (controller.signal.aborted || $('ai-provider').value !== provider || $('ai-key').value.trim() !== key) return;
+    $('ai-model-list').replaceChildren(new Option('選擇模型', ''), ...models.map(item => new Option(item.label === item.id ? item.id : `${item.label}（${item.id}）`, item.id)));
+    if (models.some(item => item.id === model)) $('ai-model-list').value = model;
+    aiSettingsMessage(models.length ? `連線成功，取得 ${models.length} 個模型。請選擇支援文字生成的模型並儲存設定。` : '連線成功，但沒有可列舉的模型；可手動輸入模型 ID。');
+  } catch (error) { if (error.name !== 'AbortError') aiSettingsMessage(`連線失敗：${error.message}`, true); }
+  finally { aiTestAbort = null; $('ai-test').disabled = false; }
+});
+$('ai-analyze').addEventListener('click', () => askAi('請根據目前提供的文獻摘要整理研究主題、主要發現與差異，標示 PMID，並提出能協助我縮小研究範圍的問題。'));
+$('ai-form').addEventListener('submit', event => { event.preventDefault(); const question = $('ai-question').value.trim(); if (question) askAi(question); });
+$('ai-cancel').addEventListener('click', () => aiAbort?.abort());
+$('ai-new').addEventListener('click', () => { aiConversation = []; renderAiConversation(); aiMessage('已開始新對話。'); });
+$('ai-download').addEventListener('click', () => {
+  const report = aiConversation.map(message => `${message.role === 'user' ? '【研究問題】' : '【AI 研究助理】'}\n${message.content}`).join('\n\n');
+  const url = URL.createObjectURL(new Blob([report], { type: 'text/plain;charset=utf-8' }));
+  const link = document.createElement('a'); link.href = url; link.download = 'litfetch-ai-report.txt'; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
+});

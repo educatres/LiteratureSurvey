@@ -7,7 +7,7 @@
   <meta name="description" content="搜尋 PubMed、篩選與挑選文獻，批次下載摘要及可合法取得的開放取用全文。">
   <title>LitFetch — PubMed 文獻批次下載工作台</title>
   <link rel="stylesheet" href="./styles.css">
-  <script type="module" src="./app.js?v=20261029-2"></script>
+  <script type="module" src="./app.js?v=20261029-3"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -33,6 +33,15 @@
         <div class="search-examples"><span>試試搜尋</span><button type="button" class="example-query" data-query="CRISPR AND gene therapy">CRISPR + gene therapy ↗</button><button type="button" class="example-query" data-query="(type 2 diabetes) AND exercise">Diabetes + exercise ↗</button><button type="button" class="example-query" data-query="AI AND radiology">AI + radiology ↗</button></div>
       </section>
 
+      <section class="ai-workspace" aria-labelledby="ai-title">
+        <div class="ai-heading"><div><span class="section-overline">AI RESEARCH ASSISTANT</span><h2 id="ai-title">AI 文獻探索</h2><p>整理已找到的摘要，或透過對話逐步釐清研究方向。</p></div><button type="button" id="ai-settings-toggle" class="subtle-button" aria-expanded="false" aria-controls="ai-settings">⚙ 連接你的 AI</button></div>
+        <div id="ai-settings" class="ai-settings" hidden>
+          <div class="ai-settings-grid"><label>AI 服務<select id="ai-provider"><option value="cgu">CGU</option><option value="openai">OpenAI</option><option value="xai">Grok（xAI）</option><option value="google">Google AI Studio</option></select></label><label>API Key<input id="ai-key" type="password" autocomplete="off" spellcheck="false" placeholder="貼上此服務的 API Key"></label><label>選擇模型<select id="ai-model-list"><option value="">請先讀取模型</option></select></label><label>或手動輸入模型 ID<input id="ai-model" type="text" autocomplete="off" placeholder="選擇模型或輸入模型 ID"></label></div>
+          <div class="ai-actions"><button type="button" id="ai-save" class="subtle-button">儲存設定</button><button type="button" id="ai-test" class="subtle-button">測試連線並讀取模型</button><button type="button" id="ai-clear" class="subtle-button">清除此服務的 Key</button></div>
+          <p class="ai-help">Key 儲存在這個瀏覽器的 localStorage，未加密；同一瀏覽器的其他使用者、擴充功能或網站程式可能讀取。請勿在共用電腦使用，並可隨時手動清除。連線與分析會直接傳送至所選服務，可能產生費用；部分服務可能限制瀏覽器連線。</p><p id="ai-settings-status" class="ai-status" role="status" aria-live="polite"></p>
+        </div>
+        <div class="ai-body"><div class="ai-scope" id="ai-scope">尚無文獻：可先描述研究方向，AI 會協助擬定搜尋條件。</div><div class="ai-actions"><button type="button" id="ai-analyze" class="ai-primary">整理文獻並提出問題</button><button type="button" id="ai-new" class="subtle-button">開始新對話</button><button type="button" id="ai-download" class="subtle-button" disabled>下載對話報告</button><button type="button" id="ai-cancel" class="subtle-button" hidden>取消分析</button></div><div id="ai-conversation" class="ai-conversation" aria-live="polite"><p class="ai-empty">選取文獻後開始整理，也可以直接輸入研究問題。</p></div><form id="ai-form" class="ai-form"><label class="sr-only" for="ai-question">你的研究問題</label><textarea id="ai-question" rows="2" placeholder="例如：我想找成人第二型糖尿病患者的運動介入研究，該如何縮小範圍？"></textarea><button type="submit" class="ai-primary" id="ai-send">送出問題 →</button></form><p class="ai-help">送出時會將研究問題、對話與所列文獻的標題和摘要傳給所選 AI 服務。AI 可能出錯，請核對 PMID 與原文。</p><p id="ai-status" class="ai-status" role="status" aria-live="polite"></p></div>
+      </section>
       <div class="work-area">
         <aside class="filter-panel" aria-labelledby="filters-title">
           <div class="panel-header"><div><span class="section-overline">01 / REFINE</span><h2 id="filters-title">縮小搜尋範圍</h2></div><button id="reset-filters" class="text-button" type="button">重設</button></div>
@@ -42,7 +51,7 @@
           <label class="checkbox-row"><input id="open-access" type="checkbox"><span><strong>限 PMC 開放取用全文</strong><small>僅搜尋 PMC Open Access Subset，較適合批次取得全文</small></span></label>
           <button type="button" class="filter-apply" id="apply-filters">套用篩選 <span aria-hidden="true">→</span></button>
           <details class="settings-details"><summary><span aria-hidden="true">⚙</span> API 設定 <span class="optional-tag">選填</span></summary><div class="settings-content"><label class="field-label" for="api-key">NCBI API Key</label><input id="api-key" type="password" spellcheck="false" autocomplete="off" placeholder="輸入 NCBI API Key"><p class="field-help">不填也能搜尋。使用自己的 NCBI Key 可提高官方 API 速率限制；Key 只存在此頁工作階段，不會儲存到網站。</p><label class="field-label" for="contact-email">聯絡 Email（建議填寫）</label><input id="contact-email" type="email" autocomplete="email" placeholder="you@university.edu"><p class="field-help">依 NCBI 建議提供，方便在 API 使用異常時聯繫。</p></div></details>
-          <div class="info-card"><span class="info-icon">ⓘ</span><p>這是免費的文獻搜尋工具，<strong>不需要 OpenAI API Key</strong>。付費牆論文不會繞過授權下載。</p></div>
+          <div class="info-card"><span class="info-icon">ⓘ</span><p>搜尋與匯出不需要 AI API Key；使用 AI 分析時需提供自己的金鑰。付費牆論文不會繞過授權下載。</p></div>
         </aside>
 
         <section class="results-panel" aria-labelledby="results-title">

@@ -1,6 +1,6 @@
 # LitFetch — PubMed 批次文獻搜尋與下載
 
-可直接部署到 **GitHub Pages** 的純靜態網頁。無需伺服器、資料庫、OpenAI API Key，也不需要在 GitHub 儲存任何金鑰。
+可直接部署到 **GitHub Pages** 的純靜態網頁。搜尋與匯出無需伺服器、資料庫或 AI API Key；選用 AI 分析時需提供自己的服務金鑰，不需要在 GitHub 儲存金鑰。
 
 ## 功能
 
@@ -11,13 +11,14 @@
 - 將摘要 TXT、`metadata.csv` 和結果報告打包為 ZIP。
 - 僅將 **PMC Open Access Subset** 內、且 Europe PMC 官方全文 API 可取得的全文 XML 打包為 ZIP；無全文的項目會記錄在報告中，不會嘗試規避付費牆。
 - 使用者可選填自己的 **NCBI API Key** 與聯絡 Email；不會寫入 localStorage、cookie、網址導覽或程式庫。
+- 可選擇 CGU、OpenAI、Grok（xAI）或 Google AI Studio，以已選文獻（未選時為目前搜尋結果）摘要進行 AI 整理與多輪探索，或先請 AI 協助擬定搜尋條件。可下載對話報告。
 
 > 這不是 AI Skill 的必要使用情境：PubMed 搜尋與匯出可完全透過官方 API 實作。**OpenAI API Key 無法代替 NCBI API Key，也無法解鎖付費論文**。
 
 ## GitHub Pages 部署
 
 1. 在 GitHub 建立一個新的**公開** Repository，例如 `litfetch`。
-2. 將此資料夾中的全部檔案放到 Repository 的根目錄，包含 `index.html`、`styles.css`、`app.js`、`domain.mjs`、`zip.mjs` 和 `.nojekyll`。
+2. 將網站檔案放到 Repository 的根目錄，包含 `index.html`、`styles.css`、`app.js`、`ai.mjs`、`domain.mjs`、`zip.mjs` 和 `.nojekyll`。
 3. 開啟 Repository **Settings → Pages → Build and deployment**。
 4. Source 選 **Deploy from a branch**；Branch 選 `main`，Folder 選 `/(root)`，按 **Save**。
 5. 等 GitHub Pages 部署完成，網站會出現在 `https://<username>.github.io/<repository>/`。
@@ -39,6 +40,11 @@ npm test
 ```
 
 ## API Key、隱私及使用限制
+
+- AI 功能的 API Key 與模型設定在按下「儲存設定」後保存在本機瀏覽器的 localStorage，未加密。網站同源程式、瀏覽器擴充功能及能使用此瀏覽器的人可能讀取，請避免在共用裝置使用；每個服務可各自清除。這與下述不儲存的 NCBI Key 不同。
+- 使用 AI 時，問題、對話、文獻標題、期刊、年份、PMID 與可用摘要會直接傳送至所選 AI 服務，可能依服務及模型計費。請遵守各服務及文獻的使用規範；AI 結果應與原文核對。
+- 「測試連線並讀取模型」會呼叫服務的模型列表，成功不代表選定模型一定有生成權限。若列表不可用，可以手動輸入模型 ID。某些服務可能不允許瀏覽器跨來源連線（CORS），此靜態網站無法繞過服務端限制。
+- 每次分析以目前已選取文獻為準，未選取時使用目前搜尋結果的一頁；在沒有搜尋結果時仍可提問。送出前會取得摘要，沒有摘要的記錄會標明。對話只保存在當前頁面，重新整理會清除，可先下載報告。
 
 - **NCBI API Key 是選填**；沒有 Key 的 E-utilities 預設限制約每秒 3 次請求，有 Key 則預設約每秒 10 次。程式採保守的串行節流。
 - Key 僅保存在使用者目前頁面的密碼欄位，透過 HTTPS 作為 `api_key` 參數直接送至 `eutils.ncbi.nlm.nih.gov`，不會傳到 LitFetch 開發者的伺服器。使用者需要信任自己打開的網頁程式碼，以及瀏覽器環境；請不要在不可信的頁面輸入 Key。
