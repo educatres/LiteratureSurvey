@@ -84,8 +84,11 @@ function currentFilters() {
 }
 
 function textFromHtml(html) {
-  const parsed = new DOMParser().parseFromString(String(html || ''), 'text/html');
-  return parsed.body.textContent?.trim() || '';
+  const withBreaks = String(html || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(?:h[1-6]|p|div|li)>/gi, '\n\n');
+  const parsed = new DOMParser().parseFromString(withBreaks, 'text/html');
+  return (parsed.body.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 async function europePmcSearch(query, signal, overrides = {}) {
@@ -319,7 +322,17 @@ function downloadBlob(blob, name) {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  const retry = $('retry-download');
+  retry.href = url;
+  retry.download = name;
+  retry.hidden = false;
+  setTimeout(() => {
+    if (retry.getAttribute('href') === url) {
+      retry.hidden = true;
+      retry.removeAttribute('href');
+    }
+    URL.revokeObjectURL(url);
+  }, 120_000);
 }
 function selectedFilesBase(papers) { return [{ name: 'metadata.csv', content: metadataCsv(papers) }]; }
 
