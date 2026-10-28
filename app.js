@@ -8,7 +8,8 @@ const $ = id => document.getElementById(id);
 const state = {
   page: 0, total: 0, items: [], selected: new Map(), lastQuery: '',
   abstractCache: new Map(), searchAbort: null, exportAbort: null,
-  isSearching: false, isExporting: false, lastNcbiRequestAt: 0
+  isSearching: false, isExporting: false, lastNcbiRequestAt: 0,
+  searchSource: 'ncbi'
 };
 let ncbiQueue = Promise.resolve();
 
@@ -82,6 +83,55 @@ function currentFilters() {
   return { from: $('year-from').value, to: $('year-to').value, articleType: $('article-type').value, openAccess: $('open-access').checked };
 }
 
+function textFromHtml(html) {
+  const parsed = new DOMParser().parseFromString(String(html || ''), 'text/html');
+  return parsed.body.textContent?.trim() || '';
+}
+
+async function europePmcSearch(query, page, signal, overrides = {}) {
+  const params = new URLSearchParams({
+    query, format: 'json', resultType: 'core', pageSize: String(overrides.pageSize || PAGE_SIZE),
+    page: String(page + 1)
+  });
+  const response = await fetch(`${EPMC}/search?${params}`, { signal, credentials: 'omit' });
+  if (!response.ok) throw new Error(`Europe PMC API HTTP ${response.status}`);
+  const data = await response.json();
+  if (!data.resultList || !Array.isArray(data.resultList.result)) throw new Error('Europe PMC 回傳資料格式不正確。');
+  return data;
+}
+
+function europePmcQuery(base, options = {}) {
+  const clauses = ['SRC:MED', `(${base})`];
+  const { from, to, articleType, openAccess, sort } = options;
+  if (from || to) clauses.push(`FIRST_PDATE:[${from || '1800'}-01-01 TO ${to || new Date().getFullYear()}-12-31]`);
+  if (openAccess) clauses.push('OPEN_ACCESS:Y');
+  const types = {
+    'review[pt]': 'PUB_TYPE:Review',
+    'systematic review[pt]': 'PUB_TYPE:"Systematic Review"',
+    'meta-analysis[pt]': 'PUB_TYPE:"Meta-Analysis"',
+    'clinical trial[pt]': 'PUB_TYPE:"Clinical Trial"',
+    'randomized controlled trial[pt]': 'PUB_TYPE:"Randomized Controlled Trial"'
+  };
+  if (types[articleType]) clauses.push(types[articleType]);
+  return clauses.join(' AND ') + (sort === 'pub date' ? ' sort_date:y' : '');
+}
+
+function normalizeEuropePmc(r) {
+  const pmid = String(r.pmid || (r.source === 'MED' ? r.id : '') || '');
+  if (!/^\d+$/.test(pmid)) return null;
+  const types = r.pubTypeList?.pubType || [];
+  const authors = (r.authorList?.author || []).map(a => a.fullName || a.lastName).filter(Boolean);
+  const pmcid = /^PMC\d+$/i.test(r.pmcid || '') ? r.pmcid.toUpperCase() : '';
+  return {
+    pmid, pmcid, doi: r.doi || '', title: textFromHtml(r.title || '未提供標題'),
+    journal: r.journalTitle || r.journalInfo?.journal?.title || '未提供期刊',
+    date: r.firstPublicationDate || r.firstIndexDate || r.pubYear || '',
+    year: r.pubYear || '', authors: authors.length ? authors : (r.authorString || '').split(/,\s*/).filter(Boolean),
+    type: Array.isArray(types) ? types : [], hasAbstract: Boolean(r.abstractText),
+    abstract: textFromHtml(r.abstractText || '')
+  };
+}
+
 async function performSearch(resetPage = true) {
   let query;
   try { query = buildPubmedQuery($('query').value, currentFilters()); }
@@ -98,13 +148,26 @@ async function performSearch(resetPage = true) {
   $('pagination').hidden = true;
   status('正在搜尋 PubMed 官方資料庫…');
   try {
-    const response = await searchIds(query, state.page * PAGE_SIZE, PAGE_SIZE, $('sort-by').value, controller.signal);
-    const papers = await getSummaries(response.ids, controller.signal);
+    let response;
+    let papers;
+    let source = 'ncbi';
+    try {
+      response = await searchIds(query, state.page * PAGE_SIZE, PAGE_SIZE, $('sort-by').value, controller.signal);
+      papers = await getSummaries(response.ids, controller.signal);
+    } catch (primaryError) {
+      if (controller.signal.aborted || primaryError.name === 'AbortError') throw primaryError;
+      const fallback = await europePmcSearch(europePmcQuery($('query').value.trim(), { ...currentFilters(), sort: $('sort-by').value }), state.page, controller.signal);
+      response = { total: fallback.hitCount || 0 };
+      papers = fallback.resultList.result.map(normalizeEuropePmc).filter(Boolean);
+      source = 'europepmc';
+    }
     if (controller.signal.aborted) return;
     state.total = response.total;
     state.items = papers;
+    state.searchSource = source;
+    for (const p of papers) if (typeof p.abstract === 'string') state.abstractCache.set(p.pmid, p.abstract);
     renderResults();
-    status(`顯示第 ${response.total ? state.page * PAGE_SIZE + 1 : 0}–${Math.min((state.page + 1) * PAGE_SIZE, response.total)} 篇；可跨頁挑選文獻。`);
+    status(`顯示第 ${response.total ? state.page * PAGE_SIZE + 1 : 0}–${Math.min((state.page + 1) * PAGE_SIZE, response.total)} 篇；可跨頁挑選文獻。${source === 'europepmc' ? '目前使用 Europe PMC 備援搜尋（PubMed 收錄文獻）；進階 PubMed 語法可能有差異。' : ''}`);
   } catch (error) {
     if (error.name !== 'AbortError' && !controller.signal.aborted) {
       $('results-list').innerHTML = '<div class="empty-state"><h3>搜尋失敗</h3><p>請稍後再試，或調整 PubMed 查詢條件。</p></div>';
@@ -198,8 +261,16 @@ function parsePubmedAbstracts(xmlText) {
 }
 
 async function getAbstracts(ids, signal) {
-  const xml = await ncbiRequest('efetch.fcgi', { db: 'pubmed', id: ids.join(','), retmode: 'xml' }, signal);
-  return parsePubmedAbstracts(xml);
+  try {
+    const xml = await ncbiRequest('efetch.fcgi', { db: 'pubmed', id: ids.join(','), retmode: 'xml' }, signal);
+    return parsePubmedAbstracts(xml);
+  } catch (error) {
+    if (signal?.aborted || error.name === 'AbortError') throw error;
+    const pmids = ids.filter(id => /^\d+$/.test(id));
+    const query = `SRC:MED AND (${pmids.map(id => `EXT_ID:${id}`).join(' OR ')})`;
+    const result = await europePmcSearch(query, 0, signal, { pageSize: pmids.length });
+    return new Map(result.resultList.result.map(r => [String(r.pmid || r.id), textFromHtml(r.abstractText || '')]));
+  }
 }
 
 async function showAbstract(pmid) {
@@ -264,8 +335,15 @@ async function getOpenAccessIds(papers, signal) {
   const eligible = new Set();
   for (const group of chunks(papers, 40)) {
     const term = `(${group.map(p => `${p.pmid}[uid]`).join(' OR ')}) AND pubmed pmc open access[filter]`;
-    const result = await searchIds(term, 0, group.length, 'relevance', signal);
-    result.ids.forEach(id => eligible.add(String(id)));
+    try {
+      const result = await searchIds(term, 0, group.length, 'relevance', signal);
+      result.ids.forEach(id => eligible.add(String(id)));
+    } catch (error) {
+      if (signal.aborted || error.name === 'AbortError') throw error;
+      const query = `SRC:MED AND OPEN_ACCESS:Y AND (${group.map(p => `EXT_ID:${p.pmid}`).join(' OR ')})`;
+      const result = await europePmcSearch(query, 0, signal, { pageSize: group.length });
+      result.resultList.result.filter(p => p.isOpenAccess === 'Y' && p.pmcid).forEach(p => eligible.add(String(p.pmid || p.id)));
+    }
   }
   return eligible;
 }
