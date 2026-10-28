@@ -9,7 +9,7 @@ const state = {
   page: 0, total: 0, items: [], selected: new Map(), lastQuery: '',
   abstractCache: new Map(), searchAbort: null, exportAbort: null,
   isSearching: false, isExporting: false, lastNcbiRequestAt: 0,
-  searchSource: 'ncbi'
+  searchSource: 'ncbi', epmcCursors: new Map([[0, '*']])
 };
 let ncbiQueue = Promise.resolve();
 
@@ -88,10 +88,10 @@ function textFromHtml(html) {
   return parsed.body.textContent?.trim() || '';
 }
 
-async function europePmcSearch(query, page, signal, overrides = {}) {
+async function europePmcSearch(query, signal, overrides = {}) {
   const params = new URLSearchParams({
     query, format: 'json', resultType: 'core', pageSize: String(overrides.pageSize || PAGE_SIZE),
-    page: String(page + 1)
+    cursorMark: overrides.cursorMark || '*'
   });
   const response = await fetch(`${EPMC}/search?${params}`, { signal, credentials: 'omit' });
   if (!response.ok) throw new Error(`Europe PMC API HTTP ${response.status}`);
@@ -139,7 +139,10 @@ async function performSearch(resetPage = true) {
   if (state.searchAbort) state.searchAbort.abort();
   const controller = new AbortController();
   state.searchAbort = controller;
-  if (resetPage || query !== state.lastQuery) state.page = 0;
+  if (resetPage || query !== state.lastQuery) {
+    state.page = 0;
+    state.epmcCursors = new Map([[0, '*']]);
+  }
   state.lastQuery = query;
   state.isSearching = true;
   $('search-button').disabled = true;
@@ -156,7 +159,10 @@ async function performSearch(resetPage = true) {
       papers = await getSummaries(response.ids, controller.signal);
     } catch (primaryError) {
       if (controller.signal.aborted || primaryError.name === 'AbortError') throw primaryError;
-      const fallback = await europePmcSearch(europePmcQuery($('query').value.trim(), { ...currentFilters(), sort: $('sort-by').value }), state.page, controller.signal);
+      const cursorMark = state.epmcCursors.get(state.page);
+      if (!cursorMark) throw new Error('無法取得此頁的備援搜尋游標，請重新搜尋。');
+      const fallback = await europePmcSearch(europePmcQuery($('query').value.trim(), { ...currentFilters(), sort: $('sort-by').value }), controller.signal, { cursorMark });
+      if (fallback.nextCursorMark) state.epmcCursors.set(state.page + 1, fallback.nextCursorMark);
       response = { total: fallback.hitCount || 0 };
       papers = fallback.resultList.result.map(normalizeEuropePmc).filter(Boolean);
       source = 'europepmc';
@@ -268,7 +274,7 @@ async function getAbstracts(ids, signal) {
     if (signal?.aborted || error.name === 'AbortError') throw error;
     const pmids = ids.filter(id => /^\d+$/.test(id));
     const query = `SRC:MED AND (${pmids.map(id => `EXT_ID:${id}`).join(' OR ')})`;
-    const result = await europePmcSearch(query, 0, signal, { pageSize: pmids.length });
+    const result = await europePmcSearch(query, signal, { pageSize: pmids.length });
     return new Map(result.resultList.result.map(r => [String(r.pmid || r.id), textFromHtml(r.abstractText || '')]));
   }
 }
@@ -341,7 +347,7 @@ async function getOpenAccessIds(papers, signal) {
     } catch (error) {
       if (signal.aborted || error.name === 'AbortError') throw error;
       const query = `SRC:MED AND OPEN_ACCESS:Y AND (${group.map(p => `EXT_ID:${p.pmid}`).join(' OR ')})`;
-      const result = await europePmcSearch(query, 0, signal, { pageSize: group.length });
+      const result = await europePmcSearch(query, signal, { pageSize: group.length });
       result.resultList.result.filter(p => p.isOpenAccess === 'Y' && p.pmcid).forEach(p => eligible.add(String(p.pmid || p.id)));
     }
   }
