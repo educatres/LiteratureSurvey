@@ -159,13 +159,18 @@ async function performSearch(resetPage = true) {
       papers = await getSummaries(response.ids, controller.signal);
     } catch (primaryError) {
       if (controller.signal.aborted || primaryError.name === 'AbortError') throw primaryError;
-      const cursorMark = state.epmcCursors.get(state.page);
-      if (!cursorMark) throw new Error('無法取得此頁的備援搜尋游標，請重新搜尋。');
-      const fallback = await europePmcSearch(europePmcQuery($('query').value.trim(), { ...currentFilters(), sort: $('sort-by').value }), controller.signal, { cursorMark });
-      if (fallback.nextCursorMark) state.epmcCursors.set(state.page + 1, fallback.nextCursorMark);
-      response = { total: fallback.hitCount || 0 };
-      papers = fallback.resultList.result.map(normalizeEuropePmc).filter(Boolean);
-      source = 'europepmc';
+      try {
+        const cursorMark = state.epmcCursors.get(state.page);
+        if (!cursorMark) throw new Error('無法取得此頁的備援搜尋游標，請重新搜尋。');
+        const fallback = await europePmcSearch(europePmcQuery($('query').value.trim(), { ...currentFilters(), sort: $('sort-by').value }), controller.signal, { cursorMark });
+        if (fallback.nextCursorMark) state.epmcCursors.set(state.page + 1, fallback.nextCursorMark);
+        response = { total: fallback.hitCount || 0 };
+        papers = fallback.resultList.result.map(normalizeEuropePmc).filter(Boolean);
+        source = 'europepmc';
+      } catch (fallbackError) {
+        if (controller.signal.aborted || fallbackError.name === 'AbortError') throw fallbackError;
+        throw new Error(`NCBI 與 Europe PMC 都無法連線（${fallbackError.message}）。可能是瀏覽器擴充功能、網路防火牆或跨站連線限制；請嘗試其他瀏覽器或網路。`);
+      }
     }
     if (controller.signal.aborted) return;
     state.total = response.total;
