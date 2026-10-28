@@ -7,7 +7,7 @@
   <meta name="description" content="搜尋 PubMed、篩選與挑選文獻，批次下載摘要及可合法取得的開放取用全文。">
   <title>LitFetch — PubMed 文獻批次下載工作台</title>
   <link rel="stylesheet" href="./styles.css">
-  <script type="module" src="./app.js?v=20261029-1"></script>
+  <script type="module" src="./app.js?v=20261029-2"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -52,7 +52,7 @@
           <div class="pagination" id="pagination" hidden><button type="button" id="prev-page" class="page-button">← 上一頁</button><span id="page-label"></span><button type="button" id="next-page" class="page-button">下一頁 →</button></div>
         </section>
 
-        <aside class="basket-panel" aria-labelledby="basket-title"><div class="basket-heading"><span class="section-overline">03 / COLLECT</span><h2 id="basket-title">我的文獻清單 <span class="basket-count" id="basket-count">0</span></h2><p>跨頁勾選，最後一次匯出。</p></div><div id="basket-items" class="basket-items"><p class="basket-empty">尚未選取文獻。<br>點選搜尋結果旁的方框加入清單。</p></div><div class="basket-footer"><div class="basket-summary"><span>已選文獻</span><strong id="selected-count">0 篇</strong></div><button type="button" id="download-abstracts" class="download-button" disabled><span>↓</span> 下載摘要 ZIP</button><button type="button" id="download-fulltext" class="download-outline" disabled><span>↓</span> 下載開放全文 XML ZIP</button><p class="download-note">每次最多 100 篇；摘要匯出包含文獻資訊 CSV。僅 PMC 開放取用子集可批次下載全文。</p></div></aside>
+        <aside class="basket-panel" aria-labelledby="basket-title"><div class="basket-heading"><span class="section-overline">03 / COLLECT</span><h2 id="basket-title">我的文獻清單 <span class="basket-count" id="basket-count">0</span></h2><p>跨頁勾選，最後一次匯出。</p></div><div id="basket-items" class="basket-items"><p class="basket-empty">尚未選取文獻。<br>點選搜尋結果旁的方框加入清單。</p></div><div class="basket-footer"><div class="basket-summary"><span>已選文獻</span><strong id="selected-count">0 篇</strong></div><button type="button" id="download-abstracts" class="download-button" disabled><span>↓</span> 下載摘要 ZIP</button><button type="button" id="download-fulltext" class="download-outline" disabled><span>↓</span> 下載開放全文 XML ZIP</button><a id="retry-download" class="retry-download" hidden>若沒有自動下載，點此取得 ZIP ↗</a><p class="download-note">每次最多 100 篇；摘要匯出包含文獻資訊 CSV。僅 PMC 開放取用子集可批次下載全文。</p></div></aside>
       </div>
     </main>
 
