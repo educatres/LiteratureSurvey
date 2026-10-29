@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f8f5">
   <meta name="description" content="搜尋 PubMed、篩選與挑選文獻，批次下載摘要及可合法取得的開放取用全文。">
-  <title>LitFetch — PubMed 文獻批次下載工作台</title>
+  <title>LiteratureSurvey — PubMed 文獻批次下載工作台</title>
   <link rel="stylesheet" href="./styles.css">
   <script type="module" src="./app.js?v=20261029-6"></script>
 </head>
 <body>
   <div class="page-shell">
     <header class="topbar">
-      <a class="brand" href="./" aria-label="LitFetch 首頁">
+      <a class="brand" href="./" aria-label="LiteratureSurvey 首頁">
         <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M7 7.5c3.1-1.1 6.1-.7 9 1.5 2.9-2.2 5.9-2.6 9-1.5v17c-3.1-1.1-6.1-.7-9 1.5-2.9-2.2-5.9-2.6-9-1.5z"/><path d="M16 9v17M10 12.5c1.2-.1 2.3.1 3.4.6M19 13.1c1.1-.5 2.2-.7 3.4-.6M10 17c1.2-.1 2.3.1 3.4.6M19 17.6c1.1-.5 2.2-.7 3.4-.6"/></svg></span>
-        <span>Lit<span class="brand-accent">Fetch</span></span>
+        <span>Literature<span class="brand-accent">Survey</span></span>
       </a>
       <div class="topbar-right"><span class="online-dot"></span> NCBI PubMed 官方資料 <span class="topbar-divider"></span> <a href="https://pubmed.ncbi.nlm.nih.gov/" target="_blank" rel="noopener noreferrer">前往 PubMed <span aria-hidden="true">↗</span></a></div>
     </header>
@@ -74,7 +74,7 @@
       </div>
     </main>
 
-    <footer class="footer"><span>LitFetch · Research made lighter</span><span>資料來源 <a href="https://pubmed.ncbi.nlm.nih.gov/" target="_blank" rel="noopener noreferrer">NCBI PubMed</a> ／ <a href="https://pmc.ncbi.nlm.nih.gov/tools/openftlist/" target="_blank" rel="noopener noreferrer">PMC Open Access</a> ／ <a href="https://europepmc.org/" target="_blank" rel="noopener noreferrer">Europe PMC</a></span><span>PubMed 摘要及全文著作權可能屬於作者或出版社，使用者須遵守個別授權。本站非 NCBI 官方產品。</span></footer>
+    <footer class="footer"><span>LiteratureSurvey · Research made lighter</span><span>資料來源 <a href="https://pubmed.ncbi.nlm.nih.gov/" target="_blank" rel="noopener noreferrer">NCBI PubMed</a> ／ <a href="https://pmc.ncbi.nlm.nih.gov/tools/openftlist/" target="_blank" rel="noopener noreferrer">PMC Open Access</a> ／ <a href="https://europepmc.org/" target="_blank" rel="noopener noreferrer">Europe PMC</a></span><span>PubMed 摘要及全文著作權可能屬於作者或出版社，使用者須遵守個別授權。本站非 NCBI 官方產品。</span></footer>
   </div>
 
   <dialog id="abstract-dialog" class="abstract-dialog"><div class="dialog-top"><span class="section-overline">ARTICLE PREVIEW</span><button type="button" class="close-dialog" id="close-abstract" aria-label="關閉摘要">×</button></div><h2 id="abstract-title"></h2><p id="abstract-meta"></p><div id="abstract-body"></div><div class="dialog-foot"><a id="abstract-pubmed-link" href="#" target="_blank" rel="noopener noreferrer">在 PubMed 開啟 ↗</a><button type="button" class="subtle-button" id="close-abstract-bottom">關閉</button></div></dialog>
