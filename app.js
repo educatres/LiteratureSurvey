@@ -1022,8 +1022,26 @@ function removeRound(roundId) {
 }
 
 function activeRound() { return rounds.find(round => round.id === activeRoundId); }
-function saveRoundResults(round, result) {
-  const pages = { ...(round.snapshot?.pages || {}), [state.page]: { items: [...state.items], total: state.total, source: state.searchSource } };
+function roundMatchesSearch(round, result) {
+  const snapshot = round?.snapshot;
+  if (!snapshot) return false;
+  const previousFilters = snapshot.filters || {};
+  const nextFilters = result.filters || {};
+  return snapshot.baseQuery === result.baseQuery && snapshot.query === result.query && snapshot.sort === result.sort &&
+    previousFilters.from === nextFilters.from && previousFilters.to === nextFilters.to &&
+    previousFilters.articleType === nextFilters.articleType && previousFilters.openAccess === nextFilters.openAccess &&
+    previousFilters.quickKeyword === nextFilters.quickKeyword;
+}
+function savedRoundPageSize(round) {
+  const value = Number(round?.snapshot?.pageSize);
+  return PAGE_SIZE_OPTIONS.has(value) ? value : PAGE_SIZE;
+}
+function findPageSizeReuseRound(result) {
+  const pageSize = getPageSize();
+  return [...rounds].reverse().find(round => roundMatchesSearch(round, result) && savedRoundPageSize(round) !== pageSize);
+}
+function saveRoundResults(round, result, { resetPages = false } = {}) {
+  const pages = { ...(resetPages ? {} : round.snapshot?.pages || {}), [state.page]: { items: [...state.items], total: state.total, source: state.searchSource } };
   round.snapshot = { baseQuery: result.baseQuery, filters: { ...result.filters }, sort: result.sort,
     query: result.query, page: state.page, pageSize: getPageSize(), total: state.total, items: [...state.items],
     source: state.searchSource, cursors: new Map(state.epmcCursors), pages };
@@ -1128,8 +1146,15 @@ async function manualSearch() {
   const pending = performSearch(true); renderRoundTabs();
   const result = await pending;
   if (result) {
-    const round = addRound(`搜尋 ${nextRoundId} · ${result.baseQuery}`);
-    saveRoundResults(round, result); renderRoundTabs(); renderAiConversation(); updateAiScope(); persistWorkspace();
+    const round = findPageSizeReuseRound(result);
+    if (round) {
+      activeRoundId = round.id;
+      saveRoundResults(round, result, { resetPages: true });
+    } else {
+      const nextRound = addRound(`搜尋 ${nextRoundId} · ${result.baseQuery}`);
+      saveRoundResults(nextRound, result);
+    }
+    renderRoundTabs(); renderAiConversation(); updateAiScope(); persistWorkspace();
   } else { const notice = $('results-notice').textContent; restoreRound(previous); status(notice, true); renderRoundTabs(); }
 }
 async function changeResultPage(page) {
@@ -1329,9 +1354,9 @@ async function searchAndAnalyze(suggestion) {
     try { result = await performSearch(true, controller.signal); }
     catch (error) { restoreRound(previous); throw error; }
     if (!result) throw new Error('搜尋未完成，請重試。');
-    const round = addRound(`AI 搜尋 ${nextRoundId} · ${result.baseQuery}`);
+    const round = findPageSizeReuseRound(result) || addRound(`AI 搜尋 ${nextRoundId} · ${result.baseQuery}`);
     round.fromAiSearch = true;
-    saveRoundResults(round, result);
+    saveRoundResults(round, result, { resetPages: round.snapshot !== null });
     renderRoundTabs(); renderAiConversation(); updateAiScope(); persistWorkspace();
     const sourceNote = result.source === 'europepmc' ? '因 PubMed 連線失敗，使用 Europe PMC 備援搜尋，PubMed 進階語法可能不完全相同。' : '';
     const question = `請根據剛才搜尋「${result.query}」的結果，整理這次取得的 ${result.papers.length} 篇文獻摘要（總搜尋結果 ${result.total} 篇，只分析目前這一頁），標示 PMID、說明限制並提出具體追問，協助我進一步縮小範圍。${sourceNote}${result.papers.length ? '' : '此次沒有搜尋到文獻，請勿虛構搜尋結果，請建議如何調整搜尋式。'}`;

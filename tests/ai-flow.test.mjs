@@ -74,6 +74,13 @@ test('a suggested search analyzes the new results, not previously selected paper
   elements.query.value = 'old_topic';
   elements['search-form'].dispatch('submit');
   await waitFor(() => elements['results-notice'].textContent.includes('顯示第'));
+  elements['page-size'].value = '50';
+  elements['page-size'].dispatch('change');
+  await waitFor(() => !elements['search-button'].disabled && elements['results-round-tabs'].children.length === 2);
+  assert.equal(elements['results-round-tabs'].children.length, 2, 'changing page size reuses the matching search tab');
+  elements['page-size'].value = '20';
+  elements['page-size'].dispatch('change');
+  await waitFor(() => !elements['search-button'].disabled && elements['results-round-tabs'].children.length === 2);
   elements['results-list'].dispatch('change', { target: { matches: () => true, dataset: { pmid: '111' }, checked: true } });
   elements['ai-question'].value = '請協助尋找相關文獻';
   elements['ai-form'].dispatch('submit');
