@@ -1,7 +1,7 @@
 export const PAGE_SIZE = 20;
 export const MAX_EXPORT = 100;
 
-export function buildPubmedQuery(query, { from = '', to = '', articleType = '', openAccess = false } = {}) {
+export function buildPubmedQuery(query, { from = '', to = '', articleType = '', openAccess = false, quickKeyword = '' } = {}) {
   const base = query.trim();
   if (!base) throw new Error('請先輸入搜尋關鍵字。');
   const low = from === '' ? '' : Number(from);
@@ -13,7 +13,19 @@ export function buildPubmedQuery(query, { from = '', to = '', articleType = '', 
   if (low || high) sections.push(`${low || 1800}:${high || new Date().getFullYear()}[dp]`);
   if (articleType) sections.push(articleType);
   if (openAccess) sections.push('pubmed pmc open access[filter]');
+  if (quickKeyword.trim()) sections.push(`(${quickKeyword.trim()})`);
   return sections.join(' AND ');
+}
+
+export function sortPapers(papers, sort) {
+  const sorted = [...papers];
+  if (sort === 'year-asc') {
+    sorted.sort((a, b) => (Number(a.year) || Infinity) - (Number(b.year) || Infinity));
+  } else if (sort === 'title-asc' || sort === 'title-desc') {
+    const direction = sort === 'title-desc' ? -1 : 1;
+    sorted.sort((a, b) => direction * String(a.title || '').localeCompare(String(b.title || ''), 'en', { sensitivity: 'base' }));
+  }
+  return sorted;
 }
 
 export function getArticleId(article, type) {

@@ -1,14 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPubmedQuery, normalizeSummary, metadataCsv, fileStem, chunks } from '../domain.mjs';
+import { buildPubmedQuery, sortPapers, normalizeSummary, metadataCsv, fileStem, chunks } from '../domain.mjs';
 import { makeZip, crc32 } from '../zip.mjs';
 
 test('PubMed filter composition respects explicit fields and OA subset', () => {
   assert.equal(buildPubmedQuery('asthma', { from: '2020', to: '2025', articleType: 'review[pt]', openAccess: true }),
     '(asthma) AND 2020:2025[dp] AND review[pt] AND pubmed pmc open access[filter]');
   assert.equal(buildPubmedQuery('cancer AND CRISPR'), '(cancer AND CRISPR)');
+  assert.equal(buildPubmedQuery('cancer', { quickKeyword: 'immunotherapy' }), '(cancer) AND (immunotherapy)');
   assert.throws(() => buildPubmedQuery(' '), /關鍵字/);
   assert.throws(() => buildPubmedQuery('asthma', { from: '2030', to: '2020' }), /起始年份/);
+});
+
+test('page results can be sorted by year or title without mutating API order', () => {
+  const papers = [{ title: 'Zulu', year: '2023' }, { title: 'alpha', year: '2019' }, { title: 'Beta', year: '' }];
+  assert.deepEqual(sortPapers(papers, 'year-asc').map(paper => paper.title), ['alpha', 'Zulu', 'Beta']);
+  assert.deepEqual(sortPapers(papers, 'title-asc').map(paper => paper.title), ['alpha', 'Beta', 'Zulu']);
+  assert.deepEqual(sortPapers(papers, 'title-desc').map(paper => paper.title), ['Zulu', 'Beta', 'alpha']);
+  assert.equal(papers[0].title, 'Zulu');
 });
 
 test('normalize NCBI summary and handle identifiers', () => {

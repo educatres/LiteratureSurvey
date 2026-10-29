@@ -1,7 +1,7 @@
 import { makeZip } from './zip.mjs';
 import { renderMarkdown } from './markdown.mjs';
 import { encodeWorkspace, decodeWorkspace } from './workspace.mjs';
-import { PAGE_SIZE, MAX_EXPORT, buildPubmedQuery, normalizeSummary, metadataCsv, fileStem, chunks } from './domain.mjs';
+import { PAGE_SIZE, MAX_EXPORT, buildPubmedQuery, sortPapers, normalizeSummary, metadataCsv, fileStem, chunks } from './domain.mjs';
 import { PROVIDERS, listModels, generateText, buildAnalysisPrompt, extractSearchSuggestion } from './ai.mjs?v=20261029-4';
 
 const NCBI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
@@ -86,7 +86,8 @@ async function getSummaries(ids, signal) {
 }
 
 function currentFilters() {
-  return { from: $('year-from').value, to: $('year-to').value, articleType: $('article-type').value, openAccess: $('open-access').checked };
+  return { from: $('year-from').value, to: $('year-to').value, articleType: $('article-type').value,
+    openAccess: $('open-access').checked, quickKeyword: $('results-keyword').value.trim() };
 }
 
 function textFromHtml(html) {
@@ -111,7 +112,7 @@ async function europePmcSearch(query, signal, overrides = {}) {
 
 function europePmcQuery(base, options = {}) {
   const clauses = ['SRC:MED', `(${base})`];
-  const { from, to, articleType, openAccess, sort } = options;
+  const { from, to, articleType, openAccess, quickKeyword, sort } = options;
   if (from || to) clauses.push(`FIRST_PDATE:[${from || '1800'}-01-01 TO ${to || new Date().getFullYear()}-12-31]`);
   if (openAccess) clauses.push('OPEN_ACCESS:Y');
   const types = {
@@ -122,6 +123,7 @@ function europePmcQuery(base, options = {}) {
     'randomized controlled trial[pt]': 'PUB_TYPE:"Randomized Controlled Trial"'
   };
   if (types[articleType]) clauses.push(types[articleType]);
+  if (quickKeyword) clauses.push(`(${quickKeyword})`);
   return clauses.join(' AND ') + (sort === 'pub date' ? ' sort_date:y' : '');
 }
 
@@ -170,7 +172,8 @@ async function performSearch(resetPage = true, externalSignal) {
     let papers;
     let source = 'ncbi';
     try {
-      response = await searchIds(query, state.page * PAGE_SIZE, PAGE_SIZE, sort, controller.signal);
+      const apiSort = sort === 'pub date' ? 'pub date' : 'relevance';
+      response = await searchIds(query, state.page * PAGE_SIZE, PAGE_SIZE, apiSort, controller.signal);
       papers = await getSummaries(response.ids, controller.signal);
     } catch (primaryError) {
       if (controller.signal.aborted || primaryError.name === 'AbortError') throw primaryError;
@@ -188,6 +191,7 @@ async function performSearch(resetPage = true, externalSignal) {
       }
     }
     if (controller.signal.aborted) throw abortError();
+    papers = sortPapers(papers, sort);
     state.total = response.total;
     state.items = papers;
     state.searchSource = source;
@@ -464,6 +468,20 @@ async function startExport(mode) {
 
 $('search-form').addEventListener('submit', event => { event.preventDefault(); manualSearch(); });
 $('apply-filters').addEventListener('click', () => manualSearch());
+$('results-keyword-form').addEventListener('submit', event => { event.preventDefault(); manualSearch(); });
+$('clear-results-keyword').addEventListener('click', () => {
+  if (!$('results-keyword').value) return;
+  $('results-keyword').value = '';
+  if ($('query').value.trim()) manualSearch(); else persistWorkspace();
+});
+$('apply-sort').addEventListener('click', () => {
+  $('result-sort-menu').open = false;
+  $('result-sort-menu').querySelector('summary')?.setAttribute('aria-expanded', 'false');
+  if ($('query').value.trim()) manualSearch(); else persistWorkspace();
+});
+$('result-sort-menu').addEventListener('toggle', () => {
+  $('result-sort-menu').querySelector('summary')?.setAttribute('aria-expanded', String($('result-sort-menu').open));
+});
 $('reset-filters').addEventListener('click', () => {
   $('year-from').value = ''; $('year-to').value = ''; $('article-type').value = '';
   $('sort-by').value = 'relevance'; $('open-access').checked = false;
@@ -527,7 +545,7 @@ let aiAbort = null;
 let aiTestAbort = null;
 
 const WORKSPACE_STORAGE = 'literaturesurvey.workspace.v1';
-const WORKSPACE_FIELDS = ['query', 'year-from', 'year-to', 'article-type', 'sort-by', 'open-access', 'contact-email', 'ai-question'];
+const WORKSPACE_FIELDS = ['query', 'year-from', 'year-to', 'article-type', 'sort-by', 'open-access', 'results-keyword', 'contact-email', 'ai-question'];
 let workspaceGeneration = 0;
 let storageBlocked = false;
 let saveTimer = null;
@@ -624,6 +642,7 @@ function restoreRound(round) {
     $('query').value = snapshot.baseQuery;
     $('year-from').value = snapshot.filters.from; $('year-to').value = snapshot.filters.to;
     $('article-type').value = snapshot.filters.articleType; $('open-access').checked = snapshot.filters.openAccess;
+    $('results-keyword').value = snapshot.filters.quickKeyword || '';
     $('sort-by').value = snapshot.sort;
     state.page = snapshot.page; state.total = snapshot.total; state.items = [...snapshot.items];
     state.lastQuery = snapshot.query; state.searchSource = snapshot.source; state.epmcCursors = new Map(snapshot.cursors);
