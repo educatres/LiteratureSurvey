@@ -287,3 +287,5 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
 .menu-panel-close:hover{border-color:#98bba5;background:#eef6ef;color:#264c3b}
 .menu-panel-close:focus-visible{outline:2px solid #78aa88;outline-offset:2px}
 .topbar-settings .settings-content>.menu-panel-controls+.field-label{margin-top:0}
+.ai-collection-toggle{display:inline-flex;align-items:center;gap:7px;flex:0 1 250px;margin:0;color:#647d6d;font-size:11px;line-height:1.5;cursor:pointer}
+.ai-collection-toggle input{width:15px;height:15px;flex:none;accent-color:#2a8060}

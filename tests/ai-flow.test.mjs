@@ -18,6 +18,7 @@ test('a suggested search analyzes the new results, not previously selected paper
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   const elements = Object.fromEntries([...html.matchAll(/\bid="([^"]+)"/g)].map(match => [match[1], new Element()]));
   elements['sort-by'].value = 'relevance';
+  elements['ai-use-collection'].checked = true;
   const allChildren = root => root.children.flatMap(child => [child, ...allChildren(child)]);
   globalThis.document = {
     getElementById: id => elements[id],

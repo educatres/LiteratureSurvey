@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#f7f8f5">
   <meta name="description" content="搜尋 PubMed、篩選與挑選文獻，批次下載摘要及可合法取得的開放取用全文。">
   <title>LiteratureSurvey — PubMed 文獻批次下載工作台</title>
-  <link rel="stylesheet" href="./styles.css?v=20261029-49">
-  <script type="module" src="./app.js?v=20261029-48"></script>
+  <link rel="stylesheet" href="./styles.css?v=20261030-50">
+  <script type="module" src="./app.js?v=20261030-49"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -72,10 +72,10 @@
         <div class="ai-body">
           <button type="button" id="ai-cancel" class="subtle-button ai-cancel-button" hidden>取消分析</button>
           <div id="ai-chat-tabs" class="ai-chat-tabs" role="tablist" aria-label="AI 對話分頁"></div>
-          <div id="ai-conversation" class="ai-conversation" aria-live="polite"><p class="ai-empty">選取文獻後開始整理，也可以直接輸入研究問題。</p></div>
+          <div id="ai-conversation" class="ai-conversation" aria-live="polite"><p class="ai-empty">選取文獻後開始整理；取消勾選後也可直接輸入研究問題。</p></div>
           <p id="ai-status" class="ai-status" role="status" aria-live="polite"></p>
           <form id="ai-form" class="ai-form"><label class="sr-only" for="ai-question">Query</label><textarea id="ai-question" rows="2" placeholder="例如：我想找成人第二型糖尿病患者的運動介入研究，該如何縮小範圍？"></textarea><button type="submit" class="ai-primary" id="ai-send">送出問題 →</button></form>
-          <div class="ai-examples-row"><small class="ai-examples-note">AI會分析「收藏的文獻清單」中收錄文獻的摘要。</small><div class="ai-examples" aria-label="對話範例"><div><button type="button" id="ai-analyze" class="ai-primary">整理文獻並提出問題</button><button type="button" id="ai-example-organize">整理收藏的文獻清單</button><button type="button" id="ai-example-compare">摘要與比較研究</button><button type="button" id="ai-example-extend">根據清單延伸搜尋</button></div></div></div>
+          <div class="ai-examples-row"><label class="ai-collection-toggle"><input id="ai-use-collection" type="checkbox" checked><span>使用「收藏的文獻清單」摘要</span></label><div class="ai-examples" aria-label="對話範例"><div><button type="button" id="ai-analyze" class="ai-primary">整理文獻並提出問題</button><button type="button" id="ai-example-organize">整理收藏的文獻清單</button><button type="button" id="ai-example-compare">摘要與比較研究</button><button type="button" id="ai-example-extend">根據清單延伸搜尋</button></div></div></div>
         </div>
       </section>
       </div>

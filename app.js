@@ -3,7 +3,7 @@ import { renderMarkdown } from './markdown.mjs';
 import { encodeWorkspace, decodeWorkspace, encodeProjectIndex, decodeProjectIndex } from './workspace.mjs';
 import { encodeProjectBackup, decodeProjectBackup, storeImportedProject, PROJECT_INDEX_STORAGE, PROJECT_WORKSPACE_PREFIX } from './project-backup.mjs';
 import { PAGE_SIZE, MAX_EXPORT, buildPubmedQuery, sortPapers, normalizeSummary, metadataCsv, fileStem, chunks } from './domain.mjs';
-import { PROVIDERS, listModels, generateText, buildAnalysisPrompt, extractSearchSuggestion } from './ai.mjs?v=20261029-4';
+import { PROVIDERS, listModels, generateText, buildAnalysisPrompt, extractSearchSuggestion } from './ai.mjs?v=20261030-5';
 
 const NCBI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
 const EPMC = 'https://www.ebi.ac.uk/europepmc/webservices/rest';
@@ -694,7 +694,8 @@ let abstractAiAbort = null;
 let abstractView = { pmid: '', text: '', translation: '', summary: '' };
 
 const LEGACY_WORKSPACE_STORAGE = 'literaturesurvey.workspace.v1';
-const WORKSPACE_FIELDS = ['query', 'year-from', 'year-to', 'article-type', 'sort-by', 'open-access', 'results-keyword', 'contact-email', 'ai-question'];
+const WORKSPACE_FIELDS = ['query', 'year-from', 'year-to', 'article-type', 'sort-by', 'open-access', 'results-keyword', 'contact-email', 'ai-question', 'ai-use-collection'];
+const CHECKBOX_WORKSPACE_FIELDS = new Set(['open-access', 'ai-use-collection']);
 let projectIndex = { version: 1, activeProjectId: null, projects: [] };
 let activeProjectId = null;
 let workspaceGeneration = 0;
@@ -829,7 +830,7 @@ function resetWorkspaceRuntime() {
   state.abstractCache = new Map(); state.abstractAssistCache = new Map(); state.searchSource = 'ncbi';
   state.epmcCursors = new Map([[0, '*']]); abstractView = { pmid: '', text: '', translation: '', summary: '' }; storageBlocked = false;
   for (const id of WORKSPACE_FIELDS) {
-    if (id === 'open-access') $(id).checked = false;
+    if (CHECKBOX_WORKSPACE_FIELDS.has(id)) $(id).checked = id === 'ai-use-collection';
     else $(id).value = id === 'sort-by' ? 'relevance' : '';
   }
 }
@@ -928,7 +929,7 @@ function openProject(projectId) {
     if (!chatIds.has(activeChatId)) activeChatId = 'chat-1';
     chatSequence = Math.max(chatSequence, ...[...chatIds].map(id => Number(String(id).replace('chat-', '')) || 1));
     for (const id of WORKSPACE_FIELDS) {
-      if (id === 'open-access') $(id).checked = Boolean(saved.fields[id]);
+      if (CHECKBOX_WORKSPACE_FIELDS.has(id)) $(id).checked = saved.fields[id] === undefined ? id === 'ai-use-collection' : Boolean(saved.fields[id]);
       else if (typeof saved.fields[id] === 'string') $(id).value = saved.fields[id];
     }
   }
@@ -947,7 +948,7 @@ function persistWorkspace() {
   clearTimeout(saveTimer); saveTimer = null;
   if (storageBlocked || !activeProjectId) return;
   try {
-    const fields = Object.fromEntries(WORKSPACE_FIELDS.map(id => [id, id === 'open-access' ? $(id).checked : $(id).value]));
+    const fields = Object.fromEntries(WORKSPACE_FIELDS.map(id => [id, CHECKBOX_WORKSPACE_FIELDS.has(id) ? $(id).checked : $(id).value]));
     localStorage.setItem(projectWorkspaceStorage(), encodeWorkspace({ rounds, activeRoundId, nextRoundId,
       selected: state.selected, abstracts: state.abstractCache, abstractAssists: state.abstractAssistCache, conversation: aiConversation, fields, activeChatId, chatSequence }));
     const project = projectById(activeProjectId);
@@ -974,7 +975,7 @@ function clearWorkspace() {
   state.abstractCache = new Map(); state.abstractAssistCache = new Map();
   state.searchSource = 'ncbi';
   for (const id of WORKSPACE_FIELDS) {
-    if (id === 'open-access') $(id).checked = false;
+    if (CHECKBOX_WORKSPACE_FIELDS.has(id)) $(id).checked = id === 'ai-use-collection';
     else $(id).value = id === 'sort-by' ? 'relevance' : '';
   }
   if ($('abstract-dialog').open) $('abstract-dialog').close();
@@ -1145,9 +1146,12 @@ function loadAiProvider() {
   aiSettingsMessage('');
 }
 function updateAiScope() {
-  const useSelected = state.selected.size > 0;
-  const count = useSelected ? state.selected.size : state.items.length;
-  $('ai-scope').textContent = count ? `分析範圍：${useSelected ? '已選取文獻' : '目前分頁的搜尋結果這一頁'} ${count} 篇；送出前會取得可用摘要。` : '尚無文獻：可先描述研究方向，AI 會協助擬定搜尋條件。';
+  if (!$('ai-use-collection').checked) {
+    $('ai-scope').textContent = '不參考收藏的文獻清單；AI 會透過多輪對話蒐集研究條件，資訊足夠時產生 PubMed 搜尋式。';
+    return;
+  }
+  const count = state.selected.size;
+  $('ai-scope').textContent = count ? `分析範圍：已選取文獻 ${count} 篇；送出前會取得可用摘要。` : '尚未收藏文獻：請先勾選搜尋結果；或取消勾選以透過多輪對話擬定搜尋條件。';
 }
 function renderAiConversation() {
   ensureConversationIds();
@@ -1156,7 +1160,7 @@ function renderAiConversation() {
   container.replaceChildren();
   const messages = aiConversation.filter(message => message.chatId === activeChatId && !isHiddenConversationQuestion(message));
   if (!messages.length) {
-    const empty = document.createElement('p'); empty.className = 'ai-empty'; empty.textContent = '選取文獻後開始整理，也可以直接輸入研究問題。'; container.append(empty);
+    const empty = document.createElement('p'); empty.className = 'ai-empty'; empty.textContent = '選取文獻後開始整理；取消勾選後也可直接輸入研究問題。'; container.append(empty);
   }
   let assistantSequence = 0;
   let queryBlock = null;
@@ -1244,8 +1248,9 @@ function requireAiConfig() {
   if (!config.key || !config.model) { aiMessage('請先開啟「連接你的 AI」，輸入 API Key 並選擇或輸入模型。', true); $('ai-settings-menu').open = true; $('ai-settings-toggle').setAttribute('aria-expanded', 'true'); return null; }
   return config;
 }
-async function runAiAnalysis(question, { papers, query, config, controller, hideQuestion = false }) {
-  aiMessage(`正在取得 ${papers.length} 篇文獻的摘要…`);
+async function runAiAnalysis(question, { papers, query, config, controller, hideQuestion = false, papersSource = '收藏的文獻清單' }) {
+  if (papers.length) aiMessage(`正在取得 ${papers.length} 篇文獻的摘要…`);
+  else aiMessage('正在根據目前對話整理研究條件…');
   const missing = papers.filter(p => !state.abstractCache.has(p.pmid));
   for (const group of chunks(missing, 40)) {
     const abstracts = await getAbstracts(group.map(p => p.pmid), controller.signal);
@@ -1256,16 +1261,16 @@ async function runAiAnalysis(question, { papers, query, config, controller, hide
   if (missing.length) renderResults();
   const records = papers.map(p => ({ ...p, abstract: state.abstractCache.get(p.pmid) || '' }));
   const available = records.filter(p => p.abstract).length;
-  const prompt = buildAnalysisPrompt({ query, papers: records, conversation: conversationContext(), question });
+  const prompt = buildAnalysisPrompt({ query, papers: records, includePapers: papers.length > 0, papersSource, conversation: conversationContext(), question });
   if (prompt.length > 240000) throw new Error('文獻摘要與對話過長，請減少選取篇數或清除對話記錄。');
   if (controller.signal.aborted) throw abortError();
-  aiMessage(`已取得 ${available}/${papers.length} 篇摘要，正在傳送給 ${PROVIDERS[config.provider].label} 分析…`);
+  aiMessage(papers.length ? `已取得 ${available}/${papers.length} 篇摘要，正在傳送給 ${PROVIDERS[config.provider].label} 分析…` : `正在傳送目前對話給 ${PROVIDERS[config.provider].label}…`);
   const answer = await generateText({ ...config, prompt, signal: controller.signal });
   if (controller.signal.aborted) throw abortError();
   const suggestion = extractSearchSuggestion(answer);
   aiConversation.push({ role: 'user', content: question, roundId: activeRoundId, chatId: activeChatId, ...(hideQuestion ? { hidden: true } : {}) }, { role: 'assistant', content: suggestion.text, searchQuery: suggestion.query, roundId: activeRoundId, chatId: activeChatId });
   renderAiConversation();
-  aiMessage(`分析完成：使用 ${papers.length} 篇文獻，其中 ${available} 篇有摘要。請核對原文。`);
+  aiMessage(papers.length ? `分析完成：使用 ${papers.length} 篇文獻，其中 ${available} 篇有摘要。請核對原文。` : '分析完成：已根據目前對話整理研究條件。');
   $('ai-question').value = '';
   persistWorkspace();
 }
@@ -1280,10 +1285,12 @@ async function withAiTask(work) {
     aiMessage(error.name === 'AbortError' ? '已取消分析。' : `分析失敗：${error.message}`, error.name !== 'AbortError');
   } finally { aiAbort = null; setAiBusy(false); }
 }
-async function askAi(question, { requireSelection = false, hideQuestion = false } = {}) {
-  if (requireSelection && !state.selected.size) { aiMessage('請先在搜尋結果勾選文獻，加入「收藏的文獻清單」。', true); return; }
-  const papers = [...(state.selected.size ? state.selected.values() : state.items)];
-  const query = state.lastQuery;
+async function askAi(question, { requireSelection = false, requireCollection = false, hideQuestion = false } = {}) {
+  const useCollection = $('ai-use-collection').checked;
+  if (requireCollection && !useCollection) { aiMessage('請先勾選「使用收藏的文獻清單摘要」，才能使用這個範例。', true); return; }
+  if (useCollection && !state.selected.size) { aiMessage('請先在搜尋結果勾選文獻，加入「收藏的文獻清單」。', true); return; }
+  const papers = useCollection ? [...state.selected.values()] : [];
+  const query = useCollection ? state.lastQuery : '';
   await withAiTask((config, controller) => runAiAnalysis(question, { papers, query, config, controller, hideQuestion }));
 }
 async function searchAndAnalyze(suggestion) {
@@ -1303,7 +1310,7 @@ async function searchAndAnalyze(suggestion) {
     renderRoundTabs(); renderAiConversation(); updateAiScope(); persistWorkspace();
     const sourceNote = result.source === 'europepmc' ? '因 PubMed 連線失敗，使用 Europe PMC 備援搜尋，PubMed 進階語法可能不完全相同。' : '';
     const question = `請根據剛才搜尋「${result.query}」的結果，整理這次取得的 ${result.papers.length} 篇文獻摘要（總搜尋結果 ${result.total} 篇，只分析目前這一頁），標示 PMID、說明限制並提出具體追問，協助我進一步縮小範圍。${sourceNote}${result.papers.length ? '' : '此次沒有搜尋到文獻，請勿虛構搜尋結果，請建議如何調整搜尋式。'}`;
-    await runAiAnalysis(question, { papers: result.papers, query: result.query, config, controller });
+    await runAiAnalysis(question, { papers: result.papers, papersSource: '這次 PubMed 搜尋結果', query: result.query, config, controller });
   });
 }
 
@@ -1360,9 +1367,10 @@ $('ai-test').addEventListener('click', async () => {
   finally { aiTestAbort = null; $('ai-test').disabled = false; }
 });
 $('ai-analyze').addEventListener('click', () => askAi(DEFAULT_ANALYSIS_QUESTION, { hideQuestion: true }));
-$('ai-example-organize').addEventListener('click', () => askAi('請整理「收藏的文獻清單」中各篇文獻摘要，按研究主題歸類，標示 PMID、主要發現與證據限制；缺少摘要的文獻請明確註明。', { requireSelection: true }));
-$('ai-example-compare').addEventListener('click', () => askAi('請逐篇摘要「收藏的文獻清單」中的文獻，比較各篇的研究對象、方法、主要結果與差異，標示 PMID；摘要未提及的資訊請註明未提供。', { requireSelection: true }));
-$('ai-example-extend').addEventListener('click', () => askAi('請根據「收藏的文獻清單」的摘要，歸納研究方向與可能的研究缺口，提出能幫助我縮小範圍的問題；資訊足夠時，提供適合延伸查找相關文獻的 PubMed 搜尋式。', { requireSelection: true }));
+$('ai-example-organize').addEventListener('click', () => askAi('請整理「收藏的文獻清單」中各篇文獻摘要，按研究主題歸類，標示 PMID、主要發現與證據限制；缺少摘要的文獻請明確註明。', { requireSelection: true, requireCollection: true }));
+$('ai-example-compare').addEventListener('click', () => askAi('請逐篇摘要「收藏的文獻清單」中的文獻，比較各篇的研究對象、方法、主要結果與差異，標示 PMID；摘要未提及的資訊請註明未提供。', { requireSelection: true, requireCollection: true }));
+$('ai-example-extend').addEventListener('click', () => askAi('請根據「收藏的文獻清單」的摘要，歸納研究方向與可能的研究缺口，提出能幫助我縮小範圍的問題；資訊足夠時，提供適合延伸查找相關文獻的 PubMed 搜尋式。', { requireSelection: true, requireCollection: true }));
+$('ai-use-collection').addEventListener('change', () => { updateAiScope(); renderAiConversation(); scheduleWorkspaceSave(); });
 $('ai-form').addEventListener('submit', event => { event.preventDefault(); const question = $('ai-question').value.trim(); if (question) askAi(question); });
 $('ai-cancel').addEventListener('click', () => aiAbort?.abort());
 $('ai-new-conversation').addEventListener('click', () => createNewChat());

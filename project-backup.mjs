@@ -2,7 +2,7 @@ import { encodeWorkspace, decodeWorkspace, encodeProjectIndex, decodeProjectInde
 
 export const PROJECT_INDEX_STORAGE = 'literaturesurvey.projects.v1';
 export const PROJECT_WORKSPACE_PREFIX = 'literaturesurvey.project.';
-const BACKUP_FIELDS = ['query', 'year-from', 'year-to', 'article-type', 'sort-by', 'open-access', 'results-keyword', 'contact-email', 'ai-question'];
+const BACKUP_FIELDS = ['query', 'year-from', 'year-to', 'article-type', 'sort-by', 'open-access', 'results-keyword', 'contact-email', 'ai-question', 'ai-use-collection'];
 
 function normalizeWorkspace(value) {
   const workspace = decodeWorkspace(JSON.stringify(value));
@@ -10,7 +10,7 @@ function normalizeWorkspace(value) {
   for (const key of BACKUP_FIELDS) {
     const field = workspace.fields[key];
     if (field === undefined) continue;
-    if (typeof field !== (key === 'open-access' ? 'boolean' : 'string')) throw new Error('Invalid workspace field');
+    if (typeof field !== (key === 'open-access' || key === 'ai-use-collection' ? 'boolean' : 'string')) throw new Error('Invalid workspace field');
     fields[key] = field;
   }
   for (const message of workspace.conversation) {
