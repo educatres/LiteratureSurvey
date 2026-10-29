@@ -162,6 +162,8 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
 }
 .paper-index{display:flex;flex:0 0 30px;flex-direction:column;align-items:center;gap:8px;padding-top:3px}.paper-index .paper-number{font-size:10px;color:#6f9180;font-weight:800;letter-spacing:.6px}.paper-index .paper-checkbox{margin:0}
 .paper-card .paper-title{margin-top:0}
+.ai-heading-title{display:flex;align-items:center;gap:7px;min-width:0}.ai-help-details{position:relative;z-index:25;flex:none}.ai-help-details summary{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid #9fc5aa;border-radius:50%;background:#eef7ef;color:#3f7b5a;cursor:pointer;font-size:13px;font-weight:800;line-height:1;list-style:none}.ai-help-details summary::-webkit-details-marker{display:none}.ai-help-details[open] summary{background:#dceee0;border-color:#6fa484}.ai-help-tooltip{position:absolute;top:calc(100% + 8px);left:0;width:330px;max-width:calc(50vw - 48px);padding:11px 13px;border:1px solid #cfe1d1;border-radius:9px;background:#fff;color:#5f7869;box-shadow:0 12px 28px rgba(22,59,45,.18);font-size:11px;line-height:1.65;font-weight:500}.ai-body{margin-top:10px}
+@media(max-width:700px){.ai-help-tooltip{position:fixed;top:72px;left:16px;right:16px;width:auto;max-width:none}}
 
 /* Balanced desktop split: vertical search history beside the results, assistant at 50%. */
 @media(min-width:1181px){
