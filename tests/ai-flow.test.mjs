@@ -121,4 +121,8 @@ test('a suggested search analyzes the new results, not previously selected paper
   assert.match(elements['ai-conversation'].children[0].textContent, /選取文獻後開始整理/);
   assert.equal(elements['ai-download'].disabled, true);
   assert.equal(elements['results-round-tabs'].children.length, 3, 'clearing the conversation keeps search history');
+  elements['ai-analyze'].dispatch('click');
+  await waitFor(() => prompts.length === 4 && !elements['ai-send'].disabled);
+  assert.equal(elements['ai-conversation'].children.length, 1, 'the preset analysis question is not rendered as a user message');
+  assert.match(elements['ai-conversation'].children[0].className, /ai-assistant/);
 });

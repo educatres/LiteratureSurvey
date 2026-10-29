@@ -7,6 +7,7 @@ import { PROVIDERS, listModels, generateText, buildAnalysisPrompt, extractSearch
 const NCBI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
 const EPMC = 'https://www.ebi.ac.uk/europepmc/webservices/rest';
 const MAX_ZIP_CONTENT = 120 * 1024 * 1024;
+const DEFAULT_ANALYSIS_QUESTION = '請根據目前提供的文獻摘要整理研究主題、主要發現與差異，標示 PMID，並提出能協助我縮小研究範圍的問題。';
 const $ = id => document.getElementById(id);
 const state = {
   page: 0, total: 0, items: [], selected: new Map(), lastQuery: '',
@@ -598,7 +599,7 @@ function clearWorkspace() {
   if (aiAbort || state.isSearching || state.isExporting) {
     storageNotice('請先等搜尋、分析或下載完成，或取消進行中的作業。', true); return;
   }
-  if (!window.confirm('清除這個瀏覽器的所有搜尋結果、摘要及 AI 對話嗎？「我的文獻清單」中的文獻不會刪除。')) return;
+  if (!window.confirm('清除這個瀏覽器的所有搜尋結果、摘要及 AI 對話嗎？「收藏的文獻清單」中的文獻不會刪除。')) return;
   try { localStorage.removeItem(WORKSPACE_STORAGE); }
   catch { storageNotice('無法清除瀏覽器儲存的搜尋紀錄，請檢查瀏覽器設定。', true); return; }
   clearTimeout(saveTimer); saveTimer = null; workspaceGeneration++; storageBlocked = false;
@@ -611,7 +612,7 @@ function clearWorkspace() {
   }
   if ($('abstract-dialog').open) $('abstract-dialog').close();
   restoreRound(activeRound()); renderRoundTabs(); renderAiConversation(); aiMessage('');
-  storageNotice('已清除搜尋紀錄與對話；我的文獻清單及 AI 金鑰設定保留。');
+  storageNotice('已清除搜尋紀錄與對話；收藏的文獻清單及 AI 金鑰設定保留。');
 }
 
 function removeRound(roundId) {
@@ -620,7 +621,7 @@ function removeRound(roundId) {
   }
   const round = rounds.find(item => item.id === roundId);
   if (!round || round.id === 0) return;
-  if (!window.confirm(`確定要清除「${round.label}」搜尋記錄嗎？「我的文獻清單」中的文獻不會刪除。`)) return;
+  if (!window.confirm(`確定要清除「${round.label}」搜尋記錄嗎？「收藏的文獻清單」中的文獻不會刪除。`)) return;
   const index = rounds.findIndex(item => item.id === roundId);
   rounds.splice(index, 1);
   for (const message of aiConversation) if (message.roundId === roundId) message.roundId = 0;
@@ -658,6 +659,9 @@ function restoreRound(round) {
 }
 function conversationContext() {
   return aiConversation.map(({ role, content, searchQuery }) => ({ role, content, ...(searchQuery ? { searchQuery } : {}) }));
+}
+function isHiddenConversationQuestion(message) {
+  return message.role === 'user' && (message.hidden === true || message.content === DEFAULT_ANALYSIS_QUESTION);
 }
 function addRound(label, parent = activeRoundId) {
   const round = { id: nextRoundId++, label, parent, snapshot: null };
@@ -742,13 +746,13 @@ function updateAiScope() {
 function renderAiConversation() {
   const container = $('ai-conversation');
   container.replaceChildren();
-  const messages = aiConversation;
+  const messages = aiConversation.filter(message => !isHiddenConversationQuestion(message));
   if (!messages.length) {
     const empty = document.createElement('p'); empty.className = 'ai-empty'; empty.textContent = '選取文獻後開始整理，也可以直接輸入研究問題。'; container.append(empty);
   }
   for (const message of messages) {
     const item = document.createElement('div'); item.className = `ai-message ${message.role === 'user' ? 'ai-user' : 'ai-assistant'}`;
-    const label = document.createElement('strong'); label.textContent = message.role === 'user' ? '你的問題' : 'AI 研究助理';
+    const label = document.createElement('strong'); label.textContent = message.role === 'user' ? '研究問題' : 'AI 研究助理';
     const body = document.createElement('div'); body.className = 'ai-message-body';
     const formatted = message.role === 'assistant' ? renderMarkdown(message.content) : null;
     if (formatted === null) body.textContent = message.content; else body.innerHTML = formatted;
@@ -777,7 +781,7 @@ function requireAiConfig() {
   if (!config.key || !config.model) { aiMessage('請先開啟「連接你的 AI」，輸入 API Key 並選擇或輸入模型。', true); $('ai-settings-menu').open = true; $('ai-settings-toggle').setAttribute('aria-expanded', 'true'); return null; }
   return config;
 }
-async function runAiAnalysis(question, { papers, query, config, controller }) {
+async function runAiAnalysis(question, { papers, query, config, controller, hideQuestion = false }) {
   aiMessage(`正在取得 ${papers.length} 篇文獻的摘要…`);
   const missing = papers.filter(p => !state.abstractCache.has(p.pmid));
   for (const group of chunks(missing, 40)) {
@@ -795,7 +799,7 @@ async function runAiAnalysis(question, { papers, query, config, controller }) {
   const answer = await generateText({ ...config, prompt, signal: controller.signal });
   if (controller.signal.aborted) throw abortError();
   const suggestion = extractSearchSuggestion(answer);
-  aiConversation.push({ role: 'user', content: question, roundId: activeRoundId }, { role: 'assistant', content: suggestion.text, searchQuery: suggestion.query, roundId: activeRoundId });
+  aiConversation.push({ role: 'user', content: question, roundId: activeRoundId, ...(hideQuestion ? { hidden: true } : {}) }, { role: 'assistant', content: suggestion.text, searchQuery: suggestion.query, roundId: activeRoundId });
   renderAiConversation();
   aiMessage(`分析完成：使用 ${papers.length} 篇文獻，其中 ${available} 篇有摘要。請核對原文。`);
   $('ai-question').value = '';
@@ -812,11 +816,11 @@ async function withAiTask(work) {
     aiMessage(error.name === 'AbortError' ? '已取消分析。' : `分析失敗：${error.message}`, error.name !== 'AbortError');
   } finally { aiAbort = null; setAiBusy(false); }
 }
-async function askAi(question, { requireSelection = false } = {}) {
-  if (requireSelection && !state.selected.size) { aiMessage('請先在搜尋結果勾選文獻，加入「我的文獻清單」。', true); return; }
+async function askAi(question, { requireSelection = false, hideQuestion = false } = {}) {
+  if (requireSelection && !state.selected.size) { aiMessage('請先在搜尋結果勾選文獻，加入「收藏的文獻清單」。', true); return; }
   const papers = [...(state.selected.size ? state.selected.values() : state.items)];
   const query = state.lastQuery;
-  await withAiTask((config, controller) => runAiAnalysis(question, { papers, query, config, controller }));
+  await withAiTask((config, controller) => runAiAnalysis(question, { papers, query, config, controller, hideQuestion }));
 }
 async function searchAndAnalyze(suggestion) {
   const query = suggestion.trim();
@@ -879,20 +883,20 @@ $('ai-test').addEventListener('click', async () => {
   } catch (error) { if (error.name !== 'AbortError') aiSettingsMessage(`連線失敗：${error.message}`, true); }
   finally { aiTestAbort = null; $('ai-test').disabled = false; }
 });
-$('ai-analyze').addEventListener('click', () => askAi('請根據目前提供的文獻摘要整理研究主題、主要發現與差異，標示 PMID，並提出能協助我縮小研究範圍的問題。'));
-$('ai-example-organize').addEventListener('click', () => askAi('請整理「我的文獻清單」中各篇文獻摘要，按研究主題歸類，標示 PMID、主要發現與證據限制；缺少摘要的文獻請明確註明。', { requireSelection: true }));
-$('ai-example-compare').addEventListener('click', () => askAi('請逐篇摘要「我的文獻清單」中的文獻，比較各篇的研究對象、方法、主要結果與差異，標示 PMID；摘要未提及的資訊請註明未提供。', { requireSelection: true }));
-$('ai-example-extend').addEventListener('click', () => askAi('請根據「我的文獻清單」的摘要，歸納研究方向與可能的研究缺口，提出能幫助我縮小範圍的問題；資訊足夠時，提供適合延伸查找相關文獻的 PubMed 搜尋式。', { requireSelection: true }));
+$('ai-analyze').addEventListener('click', () => askAi(DEFAULT_ANALYSIS_QUESTION, { hideQuestion: true }));
+$('ai-example-organize').addEventListener('click', () => askAi('請整理「收藏的文獻清單」中各篇文獻摘要，按研究主題歸類，標示 PMID、主要發現與證據限制；缺少摘要的文獻請明確註明。', { requireSelection: true }));
+$('ai-example-compare').addEventListener('click', () => askAi('請逐篇摘要「收藏的文獻清單」中的文獻，比較各篇的研究對象、方法、主要結果與差異，標示 PMID；摘要未提及的資訊請註明未提供。', { requireSelection: true }));
+$('ai-example-extend').addEventListener('click', () => askAi('請根據「收藏的文獻清單」的摘要，歸納研究方向與可能的研究缺口，提出能幫助我縮小範圍的問題；資訊足夠時，提供適合延伸查找相關文獻的 PubMed 搜尋式。', { requireSelection: true }));
 $('ai-form').addEventListener('submit', event => { event.preventDefault(); const question = $('ai-question').value.trim(); if (question) askAi(question); });
 $('ai-cancel').addEventListener('click', () => aiAbort?.abort());
 $('ai-clear-conversation').addEventListener('click', () => {
   if (!aiConversation.length) { aiMessage('目前沒有可清除的對話記錄。'); return; }
-  if (!window.confirm('確定要清除所有 AI 對話記錄嗎？這不會刪除搜尋記錄或「我的文獻清單」。')) return;
+  if (!window.confirm('確定要清除所有 AI 對話記錄嗎？這不會刪除搜尋記錄或「收藏的文獻清單」。')) return;
   aiConversation = [];
   renderAiConversation(); aiMessage('已清除對話記錄。'); persistWorkspace();
 });
 $('ai-download').addEventListener('click', () => {
-  const report = aiConversation.map(message => `【${message.role === 'user' ? '研究問題' : 'AI 研究助理'}】\n${message.content}${message.searchQuery ? `\n\n【建議的 PubMed 搜尋式】\n${message.searchQuery}` : ''}`).join('\n\n');
+  const report = aiConversation.filter(message => !isHiddenConversationQuestion(message)).map(message => `【${message.role === 'user' ? '研究問題' : 'AI 研究助理'}】\n${message.content}${message.searchQuery ? `\n\n【建議的 PubMed 搜尋式】\n${message.searchQuery}` : ''}`).join('\n\n');
   const url = URL.createObjectURL(new Blob([report], { type: 'text/plain;charset=utf-8' }));
   const link = document.createElement('a'); link.href = url; link.download = 'litfetch-ai-report.txt'; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
 });

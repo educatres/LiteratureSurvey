@@ -150,3 +150,4 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
   .ai-form{flex:none;margin:auto -18px -18px;padding:12px 18px 18px;border-top:1px solid #dce8dd;background:#fff}
 }
 @media(max-width:700px){.basket-menu-content{max-height:calc(100vh - 88px)}.result-sort-popover{position:fixed;top:126px;left:16px;right:16px;width:auto}.results-keyword-form{flex-wrap:wrap}.results-keyword-form input{flex-basis:calc(100% - 28px)}.results-keyword-form button{flex:1}}
+@media(min-width:701px){.ai-workspace{box-shadow:-24px 0 56px rgba(18,54,39,.22),-7px 0 20px rgba(18,54,39,.14)}}
