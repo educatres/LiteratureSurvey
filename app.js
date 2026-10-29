@@ -1,6 +1,7 @@
 import { makeZip } from './zip.mjs';
 import { renderMarkdown } from './markdown.mjs';
 import { encodeWorkspace, decodeWorkspace, encodeProjectIndex, decodeProjectIndex } from './workspace.mjs';
+import { encodeProjectBackup, decodeProjectBackup, storeImportedProject, PROJECT_INDEX_STORAGE, PROJECT_WORKSPACE_PREFIX } from './project-backup.mjs';
 import { PAGE_SIZE, MAX_EXPORT, buildPubmedQuery, sortPapers, normalizeSummary, metadataCsv, fileStem, chunks } from './domain.mjs';
 import { PROVIDERS, listModels, generateText, buildAnalysisPrompt, extractSearchSuggestion } from './ai.mjs?v=20261029-4';
 
@@ -693,8 +694,6 @@ let abstractAiAbort = null;
 let abstractView = { pmid: '', text: '', translation: '', summary: '' };
 
 const LEGACY_WORKSPACE_STORAGE = 'literaturesurvey.workspace.v1';
-const PROJECT_INDEX_STORAGE = 'literaturesurvey.projects.v1';
-const PROJECT_WORKSPACE_PREFIX = 'literaturesurvey.project.';
 const WORKSPACE_FIELDS = ['query', 'year-from', 'year-to', 'article-type', 'sort-by', 'open-access', 'results-keyword', 'contact-email', 'ai-question'];
 let projectIndex = { version: 1, activeProjectId: null, projects: [] };
 let activeProjectId = null;
@@ -751,11 +750,48 @@ function renderProjectList() {
     const meta = document.createElement('span'); meta.textContent = `最後使用：${projectDate(project.updatedAt) || '尚無紀錄'}`;
     open.append(title, meta); open.addEventListener('click', () => openProject(project.id));
     const actions = document.createElement('div'); actions.className = 'project-card-actions';
+    const exportButton = document.createElement('button'); exportButton.type = 'button'; exportButton.className = 'text-button'; exportButton.textContent = '匯出';
+    exportButton.addEventListener('click', () => exportProject(project.id));
     const rename = document.createElement('button'); rename.type = 'button'; rename.className = 'text-button'; rename.textContent = '重新命名';
     rename.addEventListener('click', () => renameProject(project.id));
     const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'text-button danger-button'; remove.textContent = '刪除';
     remove.addEventListener('click', () => deleteProject(project.id));
-    actions.append(rename, remove); item.append(open, actions); list.append(item);
+    actions.append(exportButton, rename, remove); item.append(open, actions); list.append(item);
+  }
+}
+
+function projectFilename(name) {
+  return (name.normalize('NFKC').replace(/[<>:"/\\|?*\u0000-\u001f\u007f]/g, '_').replace(/\s+/g, '_').replace(/_+/g, '_').slice(0, 70).replace(/[. ]+$/, '') || 'project');
+}
+
+function exportProject(projectId) {
+  const project = projectById(projectId);
+  if (!project) return;
+  try {
+    const raw = localStorage.getItem(projectWorkspaceStorage(projectId));
+    if (!raw) throw new Error('Project workspace is missing');
+    const backup = encodeProjectBackup(project, raw);
+    const url = URL.createObjectURL(new Blob([backup], { type: 'application/json;charset=utf-8' }));
+    const link = document.createElement('a'); link.href = url; link.download = `${projectFilename(project.name)}.literaturesurvey.json`;
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    projectStorageNotice(`已匯出「${project.name}」專案。`);
+  } catch {
+    projectStorageNotice('無法匯出此專案，請檢查儲存資料是否完整。', true);
+  }
+}
+
+async function importProject(file) {
+  if (!file) return;
+  if (file.size > 20 * 1024 * 1024) { projectStorageNotice('專案備份檔過大，無法匯入。', true); return; }
+  try {
+    const backup = decodeProjectBackup(await file.text());
+    const result = storeImportedProject(localStorage, projectIndex, backup, newProjectId());
+    projectIndex = result.index;
+    renderProjectList();
+    projectStorageNotice(`已匯入「${result.project.name}」，請點選專案進入。`);
+  } catch {
+    projectStorageNotice('專案備份格式無效或無法儲存，匯入未完成。', true);
   }
 }
 
@@ -1279,6 +1315,11 @@ $('project-create-form').addEventListener('submit', event => {
   if (!project) return;
   $('project-name').value = '';
   openProject(project.id);
+});
+$('project-import-button').addEventListener('click', () => $('project-import-input').click());
+$('project-import-input').addEventListener('change', async event => {
+  await importProject(event.target.files?.[0]);
+  event.target.value = '';
 });
 $('project-switch').addEventListener('click', () => showProjectGate());
 loadProjectIndex();

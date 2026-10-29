@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { encodeWorkspace, decodeWorkspace, encodeProjectIndex, decodeProjectIndex } from '../workspace.mjs';
+import { encodeProjectBackup, decodeProjectBackup, storeImportedProject } from '../project-backup.mjs';
 
 test('workspace restores result pages, cursors, selections, abstracts, conversation and draft', () => {
   const paper = { pmid: '123', pmcid: 'PMC123', doi: '', title: 'Study', journal: 'Journal', date: '', year: '2025', authors: [], type: [] };
@@ -37,4 +38,23 @@ test('project index preserves named projects and rejects unsafe entries', () => 
   assert.throws(() => decodeProjectIndex(JSON.stringify({ version: 1, activeProjectId: 'project-one', projects: [
     { id: 'bad-id', name: 'Unsafe id', createdAt: '', updatedAt: '' }
   ] })));
+});
+
+test('project backups round-trip workspaces and import as uniquely named projects', () => {
+  const rawWorkspace = encodeWorkspace({
+    rounds: [{ id: 0, label: '初始對話', parent: null, snapshot: null }], activeRoundId: 0, nextRoundId: 1,
+    selected: new Map(), abstracts: new Map(), conversation: [], fields: { query: 'cancer' }
+  });
+  const project = { id: 'project-source', name: '研究專案', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-02T00:00:00.000Z' };
+  const backup = decodeProjectBackup(encodeProjectBackup(project, rawWorkspace));
+  assert.equal(backup.project.name, '研究專案');
+  assert.equal(backup.workspace.fields.query, 'cancer');
+
+  const values = new Map();
+  const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) };
+  const index = { version: 1, activeProjectId: null, projects: [{ ...project, id: 'project-existing' }] };
+  const imported = storeImportedProject(storage, index, backup, 'project-imported', '2026-01-03T00:00:00.000Z');
+  assert.equal(imported.project.name, '研究專案 (2)');
+  assert.ok(values.has('literaturesurvey.project.project-imported'));
+  assert.throws(() => decodeProjectBackup(JSON.stringify({ ...backup, workspace: { version: 1 } })));
 });
