@@ -69,3 +69,11 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
 @media(max-width:700px){.topbar-right{gap:6px}.topbar-settings summary{padding:0 6px;font-size:10px}.topbar-settings .settings-content{position:fixed;top:74px;left:16px;right:16px;width:auto}.filter-panel{display:block}.filters-content{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}.filters-content .field-group{margin-top:19px}.filters-content .checkbox-row,.filters-content .filter-apply,.filters-content .info-card{grid-column:1/-1}.search-form{height:auto}.primary-button{height:44px}.round-tabs{padding-left:5px;padding-right:5px}.round-tab{max-width:145px}.ai-workspace{position:relative;padding-top:76px}.basket-drawer{top:14px;left:16px;right:auto;width:calc(100% - 64px);max-height:300px;border-radius:10px;box-shadow:0 5px 14px rgba(25,52,39,.13)}.basket-drawer-toggle{right:-33px}.basket-drawer.is-collapsed{transform:translateX(calc(100% + 1px))}.basket-drawer-body{padding-left:11px;padding-right:11px}}
 .basket-drawer.is-collapsed{pointer-events:none}.basket-drawer.is-collapsed .basket-drawer-toggle{left:0;right:auto;pointer-events:auto}
 @media(max-width:700px){.basket-drawer.is-collapsed{transform:translateX(calc(-100% - 17px))}.basket-drawer.is-collapsed .basket-drawer-toggle{left:auto;right:-33px}}
+
+/* Let the collection drawer slide beneath the opaque chat surface. */
+.ai-workspace::before{content:"";position:absolute;z-index:2;inset:0;border-radius:13px;background:#f5faf5;pointer-events:auto}
+.ai-workspace>.ai-heading,.ai-workspace>.ai-settings,.ai-workspace>.ai-body{position:relative;z-index:3}
+.basket-drawer{z-index:4}
+.basket-drawer.is-collapsed{z-index:1;transform:translateX(calc(100% - 42px));pointer-events:auto}
+.basket-drawer.is-collapsed .basket-drawer-header,.basket-drawer.is-collapsed .basket-drawer-body{visibility:visible;pointer-events:auto}
+@media(max-width:700px){.ai-workspace::before{display:none}.basket-drawer.is-collapsed{z-index:5;transform:translateX(calc(-100% - 17px))}}
