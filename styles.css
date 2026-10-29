@@ -154,6 +154,14 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
 @media(min-width:701px){.ai-workspace{box-shadow:-24px 0 56px rgba(18,54,39,.22),-7px 0 20px rgba(18,54,39,.14)}}
 @media(min-width:701px){.basket-menu-content{position:fixed;height:80vh;max-height:80vh}}
 @media(min-width:701px){.ai-examples{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.ai-examples .ai-examples-note{flex:1 1 190px;margin:0}.ai-examples>div{flex:0 1 auto}}
+@media(min-width:1181px){
+  .rounds-bar{position:sticky;top:0;align-self:start;height:100vh;max-height:100vh;overflow:hidden;z-index:4;background:#f5faf5}
+  .rounds-bar .round-tabs{max-height:calc(100vh - 150px)}
+  .rounds-bar .round-tab[aria-pressed="true"]{border-bottom-color:#f0a51a;box-shadow:0 3px 10px rgba(240,165,26,.35)}
+  .rounds-bar .round-tab[aria-pressed="true"]:after{content:"";position:absolute;left:5px;right:5px;bottom:-3px;height:3px;border-radius:3px;background:#f0a51a;box-shadow:0 2px 8px rgba(240,165,26,.55)}
+}
+.paper-index{display:flex;flex:0 0 30px;flex-direction:column;align-items:center;gap:8px;padding-top:3px}.paper-index .paper-number{font-size:10px;color:#6f9180;font-weight:800;letter-spacing:.6px}.paper-index .paper-checkbox{margin:0}
+.paper-card .paper-title{margin-top:0}
 
 /* Balanced desktop split: vertical search history beside the results, assistant at 50%. */
 @media(min-width:1181px){

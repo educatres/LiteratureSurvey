@@ -229,8 +229,8 @@ function renderResults() {
       const authors = p.authors.slice(0, 4).join(', ') + (p.authors.length > 4 ? ' et al.' : '');
       const articleType = p.type.find(x => /review|trial|meta-analysis/i.test(x)) || '';
       return `<article class="paper-card${selected ? ' is-selected' : ''}">
-        <input type="checkbox" class="paper-checkbox" aria-label="選取 ${escapeHtml(p.title)}" data-pmid="${p.pmid}" ${selected ? 'checked' : ''}>
-        <div class="paper-main"><div class="paper-top"><span class="paper-number">PAPER ${String(state.page * PAGE_SIZE + index + 1).padStart(3, '0')}</span><div class="paper-pills">${p.pmcid ? '<span class="pill pmc">PMC 收錄</span>' : ''}${articleType ? `<span class="pill type">${escapeHtml(articleType)}</span>` : ''}</div></div>
+        <div class="paper-index"><span class="paper-number">${String(state.page * PAGE_SIZE + index + 1).padStart(3, '0')}</span><input type="checkbox" class="paper-checkbox" aria-label="選取 ${escapeHtml(p.title)}" data-pmid="${p.pmid}" ${selected ? 'checked' : ''}></div>
+        <div class="paper-main"><div class="paper-top"><div class="paper-pills">${p.pmcid ? '<span class="pill pmc">PMC 收錄</span>' : ''}${articleType ? `<span class="pill type">${escapeHtml(articleType)}</span>` : ''}</div></div>
         <h3 class="paper-title">${escapeHtml(p.title)}</h3><p class="paper-authors">${escapeHtml(authors || '未提供作者')}</p><div class="paper-publication"><span>${escapeHtml(p.journal)}</span><span>${escapeHtml(p.date || p.year)}</span><span>PMID ${p.pmid}</span></div>
         <div class="paper-footer"><button type="button" data-preview="${p.pmid}">查看摘要 ↗</button><a href="https://pubmed.ncbi.nlm.nih.gov/${p.pmid}/" target="_blank" rel="noopener noreferrer">PubMed ↗</a>${p.pmcid ? `<a href="https://pmc.ncbi.nlm.nih.gov/articles/${p.pmcid}/" target="_blank" rel="noopener noreferrer">PMC 全文頁 ↗</a>` : ''}${p.doi ? `<a class="doi" href="https://doi.org/${encodeURIComponent(p.doi)}" target="_blank" rel="noopener noreferrer">DOI ↗</a>` : ''}</div></div></article>`;
     }).join('');
