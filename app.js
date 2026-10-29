@@ -479,6 +479,7 @@ $('toggle-filters').addEventListener('click', () => {
 });
 const topbarMenus = [...document.querySelectorAll('.topbar-right details')];
 for (const menu of topbarMenus) menu.addEventListener('toggle', () => {
+  menu.querySelector('summary')?.setAttribute('aria-expanded', String(menu.open));
   if (menu.open) topbarMenus.filter(other => other !== menu).forEach(other => { other.open = false; });
 });
 document.querySelectorAll('.example-query').forEach(button => button.addEventListener('click', () => {
@@ -727,7 +728,7 @@ function setAiBusy(busy) {
 }
 function requireAiConfig() {
   const config = currentAiConfig();
-  if (!config.key || !config.model) { aiMessage('請先開啟「連接你的 AI」，輸入 API Key 並選擇或輸入模型。', true); $('ai-settings').hidden = false; $('ai-settings-toggle').setAttribute('aria-expanded', 'true'); return null; }
+  if (!config.key || !config.model) { aiMessage('請先開啟「連接你的 AI」，輸入 API Key 並選擇或輸入模型。', true); $('ai-settings-menu').open = true; $('ai-settings-toggle').setAttribute('aria-expanded', 'true'); return null; }
   return config;
 }
 async function runAiAnalysis(question, { papers, query, config, controller }) {
@@ -804,11 +805,6 @@ for (const id of WORKSPACE_FIELDS) {
   $(id).addEventListener('change', scheduleWorkspaceSave);
 }
 globalThis.addEventListener?.('pagehide', () => { if (saveTimer) persistWorkspace(); });
-$('ai-settings-toggle').addEventListener('click', () => {
-  $('ai-settings').hidden = !$('ai-settings').hidden;
-  $('ai-settings-toggle').setAttribute('aria-expanded', String(!$('ai-settings').hidden));
-  if (!$('ai-settings').hidden) $('ai-settings').scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-});
 $('ai-provider').addEventListener('change', () => { aiTestAbort?.abort(); loadAiProvider(); });
 $('ai-model-list').addEventListener('change', () => { if ($('ai-model-list').value) $('ai-model').value = $('ai-model-list').value; });
 $('ai-save').addEventListener('click', () => {
