@@ -9,12 +9,14 @@ test('workspace restores result pages, cursors, selections, abstracts, conversat
     pages: { 0: { items: [paper], total: 21, source: 'europepmc' } } };
   const original = { rounds: [{ id: 0, label: '初始對話', parent: null, snapshot }, { id: 1, label: '搜尋', parent: 0, snapshot: null }],
     activeRoundId: 0, nextRoundId: 2, selected: new Map([['123', paper]]), abstracts: new Map([['123', 'Abstract']]),
+    abstractAssists: new Map([['123', { translation: '中文翻譯', summary: 'AI 摘要' }]]),
     conversation: [{ roundId: 0, role: 'assistant', content: 'Answer', searchQuery: 'cancer' }], fields: { query: 'draft' } };
   const restored = decodeWorkspace(encodeWorkspace(original));
   assert.equal(restored.rounds[0].snapshot.cursors.get(1), 'next');
   assert.equal(restored.rounds[0].snapshot.pages[0].items[0].pmid, '123');
   assert.equal(restored.selected.get('123').title, 'Study');
   assert.equal(restored.abstracts.get('123'), 'Abstract');
+  assert.deepEqual(restored.abstractAssists.get('123'), { translation: '中文翻譯', summary: 'AI 摘要' });
   assert.equal(restored.conversation[0].searchQuery, 'cancer');
   assert.equal(restored.fields.query, 'draft');
 });
@@ -23,4 +25,6 @@ test('corrupt or unsafe stored data is rejected instead of partially restored', 
   assert.throws(() => decodeWorkspace('{'));
   assert.throws(() => decodeWorkspace(JSON.stringify({ version: 1, rounds: [{ id: 0, label: 'x', parent: null, snapshot: null }],
     activeRoundId: 0, nextRoundId: 1, selected: [['123', { pmid: '123" onclick="alert(1)' }]], abstracts: [], conversation: [], fields: {} })));
+  assert.throws(() => decodeWorkspace(JSON.stringify({ version: 1, rounds: [{ id: 0, label: 'x', parent: null, snapshot: null }],
+    activeRoundId: 0, nextRoundId: 1, selected: [], abstracts: [], abstractAssists: [['123', { translation: 1, summary: '' }]], conversation: [], fields: {} })));
 });

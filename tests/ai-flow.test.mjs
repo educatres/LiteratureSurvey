@@ -142,4 +142,10 @@ test('a suggested search analyzes the new results, not previously selected paper
   await waitFor(() => prompts.length === 6 && !elements['abstract-summarize'].disabled);
   assert.match(prompts[5], /研究目的／方法／主要結果／結論/);
   assert.equal(elements['abstract-summary-panel'].hidden, false);
+  elements['close-abstract-bottom'].dispatch('click');
+  elements['abstract-translation'].textContent = ''; elements['abstract-summary'].textContent = '';
+  elements['results-list'].dispatch('click', { target: { closest: () => ({ dataset: { preview: '333' } }) } });
+  assert.equal(elements['abstract-translation-panel'].hidden, false, 'saved translation is restored when the preview reopens');
+  assert.equal(elements['abstract-summary-panel'].hidden, false, 'saved AI summary is restored when the preview reopens');
+  assert.match(elements['abstract-translation'].textContent, /整理新文獻/);
 });

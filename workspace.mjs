@@ -1,10 +1,10 @@
 // Keep browser storage JSON-compatible while preserving cursor maps in memory.
-export function encodeWorkspace({ rounds, activeRoundId, nextRoundId, selected, abstracts, conversation, fields, activeChatId = 'chat-1', chatSequence = 1 }) {
+export function encodeWorkspace({ rounds, activeRoundId, nextRoundId, selected, abstracts, abstractAssists = new Map(), conversation, fields, activeChatId = 'chat-1', chatSequence = 1 }) {
   return JSON.stringify({ version: 1, activeRoundId, nextRoundId,
     rounds: rounds.map(round => ({ ...round, snapshot: round.snapshot && {
       ...round.snapshot, cursors: [...round.snapshot.cursors]
     } })),
-    selected: [...selected], abstracts: [...abstracts], conversation, fields, activeChatId, chatSequence
+    selected: [...selected], abstracts: [...abstracts], abstractAssists: [...abstractAssists], conversation, fields, activeChatId, chatSequence
   });
 }
 
@@ -13,6 +13,8 @@ export function decodeWorkspace(raw) {
   if (!saved || saved.version !== 1 || !Array.isArray(saved.rounds) || !saved.rounds.length ||
       !Array.isArray(saved.selected) || !Array.isArray(saved.abstracts) || !Array.isArray(saved.conversation) ||
       !saved.fields || typeof saved.fields !== 'object') throw new Error('Invalid workspace');
+  const abstractAssists = saved.abstractAssists === undefined ? [] : saved.abstractAssists;
+  if (!Array.isArray(abstractAssists)) throw new Error('Invalid abstract assists');
   const validPaper = paper => paper && typeof paper.pmid === 'string' && /^\d+$/.test(paper.pmid) &&
     typeof paper.pmcid === 'string' && (!paper.pmcid || /^PMC\d+$/.test(paper.pmcid)) &&
     ['doi', 'title', 'journal', 'date', 'year'].every(key => typeof paper[key] === 'string') &&
@@ -40,7 +42,9 @@ export function decodeWorkspace(raw) {
   for (const message of saved.conversation) if (!message || !ids.has(message.roundId) || !['user', 'assistant'].includes(message.role) || typeof message.content !== 'string' || (message.searchQuery !== undefined && typeof message.searchQuery !== 'string')) throw new Error('Invalid message');
   if (!saved.selected.every(entry => Array.isArray(entry) && entry.length === 2 && validPaper(entry[1]) && entry[0] === entry[1].pmid) ||
       !saved.abstracts.every(entry => Array.isArray(entry) && entry.length === 2 && /^\d+$/.test(entry[0]) && typeof entry[1] === 'string')) throw new Error('Invalid saved papers');
+  if (!abstractAssists.every(entry => Array.isArray(entry) && entry.length === 2 && /^\d+$/.test(entry[0]) && entry[1] &&
+      typeof entry[1].translation === 'string' && typeof entry[1].summary === 'string')) throw new Error('Invalid abstract assists');
   const activeChatId = typeof saved.activeChatId === 'string' && /^chat-\d+$/.test(saved.activeChatId) ? saved.activeChatId : 'chat-1';
   const chatSequence = Number.isSafeInteger(saved.chatSequence) && saved.chatSequence >= 1 ? saved.chatSequence : 1;
-  return { ...saved, rounds, selected: new Map(saved.selected), abstracts: new Map(saved.abstracts), activeChatId, chatSequence };
+  return { ...saved, rounds, selected: new Map(saved.selected), abstracts: new Map(saved.abstracts), abstractAssists: new Map(abstractAssists), activeChatId, chatSequence };
 }
