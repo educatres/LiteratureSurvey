@@ -1113,7 +1113,8 @@ function renderAiConversation() {
     const empty = document.createElement('p'); empty.className = 'ai-empty'; empty.textContent = '選取文獻後開始整理，也可以直接輸入研究問題。'; container.append(empty);
   }
   let assistantSequence = 0;
-  for (const message of messages) {
+  let queryBlock = null;
+  for (const [index, message] of messages.entries()) {
     const item = document.createElement('div'); item.className = `ai-message ${message.role === 'user' ? 'ai-user' : 'ai-assistant'}`;
     if (message.role === 'assistant') item.id = `ai-message-${message.id}`;
     const heading = document.createElement('div'); heading.className = 'ai-message-heading';
@@ -1126,7 +1127,11 @@ function renderAiConversation() {
     const body = document.createElement('div'); body.className = 'ai-message-body';
     const formatted = message.role === 'assistant' ? renderMarkdown(message.content) : null;
     if (formatted === null) body.textContent = message.content; else body.innerHTML = formatted;
-    heading.append(label); item.append(heading, body);
+    heading.append(label); item.append(heading);
+    if (message.role === 'assistant' && queryBlock) {
+      item.append(queryBlock); queryBlock = null;
+    }
+    item.append(body);
     if (message.role === 'assistant' && (message.searchQuery || message.hasSearchSuggestion)) {
       const suggestion = document.createElement('div'); suggestion.className = 'ai-suggestion';
       const hint = document.createElement('label'); hint.textContent = '建議的 PubMed 搜尋式（可修改）';
@@ -1145,7 +1150,8 @@ function renderAiConversation() {
       continueButton.addEventListener('click', () => createNewChat(previous ? [previous, message] : [message]));
       heading.append(saveButton, continueButton);
     }
-    container.append(item);
+    if (message.role === 'user' && messages[index + 1]?.role === 'assistant') queryBlock = item;
+    else container.append(item);
   }
   $('ai-download').disabled = !aiConversation.some(message => message.role === 'assistant');
   renderNotebook();
