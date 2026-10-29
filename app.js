@@ -749,16 +749,26 @@ function renderRoundTabs() {
     const tab = document.createElement('div'); tab.className = `round-tab${round.id === 0 ? ' initial-round' : ''}`;
     const select = document.createElement('button'); select.type = 'button'; select.className = 'round-tab-select';
     const label = document.createElement('span'); label.className = 'round-tab-label'; label.textContent = round.label; select.append(label); tab.append(select);
-    let close = null;
+    let rename = null; let close = null;
     if (round.id !== 0) {
+      rename = document.createElement('button'); rename.type = 'button'; rename.className = 'round-tab-rename'; rename.textContent = '✎';
+      rename.setAttribute('aria-label', `重新命名「${round.label}」`); rename.title = '重新命名'; tab.append(rename);
       close = document.createElement('button'); close.type = 'button'; close.className = 'round-tab-close'; close.textContent = '×';
       close.setAttribute('aria-label', '清除這筆搜尋記錄'); tab.append(close);
     }
     tab.title = round.label; tab.setAttribute('aria-pressed', String(round.id === activeRoundId));
-    tab.setAttribute('aria-disabled', String(Boolean(aiAbort || state.isSearching))); select.disabled = Boolean(aiAbort || state.isSearching); if (close) close.disabled = select.disabled;
+    tab.setAttribute('aria-disabled', String(Boolean(aiAbort || state.isSearching))); select.disabled = Boolean(aiAbort || state.isSearching); if (rename) rename.disabled = select.disabled; if (close) close.disabled = select.disabled;
     tab.addEventListener('click', () => {
       if (aiAbort || state.isSearching || round.id === activeRoundId) return;
       activeRoundId = round.id; restoreRound(round); renderRoundTabs(); renderAiConversation(); aiMessage(''); persistWorkspace();
+    });
+    rename?.addEventListener('click', event => {
+      event.stopPropagation();
+      const nextLabel = window.prompt('請輸入搜尋分頁名稱：', round.label);
+      if (nextLabel === null) return;
+      const trimmed = nextLabel.trim();
+      if (!trimmed) { storageNotice('搜尋分頁名稱不能留白。', true); return; }
+      round.label = trimmed.slice(0, 80); storageNotice(''); renderRoundTabs(); persistWorkspace();
     });
     close?.addEventListener('click', event => { event.stopPropagation(); removeRound(round.id); });
     container.append(tab);
@@ -829,11 +839,12 @@ function renderAiConversation() {
   for (const message of messages) {
     const item = document.createElement('div'); item.className = `ai-message ${message.role === 'user' ? 'ai-user' : 'ai-assistant'}`;
     if (message.role === 'assistant') item.id = `ai-message-${message.id}`;
+    const heading = document.createElement('div'); heading.className = 'ai-message-heading';
     const label = document.createElement('strong'); label.textContent = message.role === 'user' ? 'Query' : 'AI 研究助理';
     const body = document.createElement('div'); body.className = 'ai-message-body';
     const formatted = message.role === 'assistant' ? renderMarkdown(message.content) : null;
     if (formatted === null) body.textContent = message.content; else body.innerHTML = formatted;
-    item.append(label, body);
+    heading.append(label); item.append(heading, body);
     if (message.role === 'assistant' && (message.searchQuery || message.hasSearchSuggestion)) {
       const suggestion = document.createElement('div'); suggestion.className = 'ai-suggestion';
       const hint = document.createElement('label'); hint.textContent = '建議的 PubMed 搜尋式（可修改）';
@@ -847,11 +858,10 @@ function renderAiConversation() {
       const saveButton = document.createElement('button'); saveButton.type = 'button'; saveButton.className = 'conversation-save-button';
       saveButton.textContent = message.noted ? '♥' : '♡'; saveButton.setAttribute('aria-label', message.noted ? '從對話筆記移除' : '加入對話筆記'); saveButton.setAttribute('aria-pressed', String(Boolean(message.noted)));
       saveButton.addEventListener('click', () => { message.noted = !message.noted; renderAiConversation(); persistWorkspace(); });
-      item.append(saveButton);
       const continueButton = document.createElement('button'); continueButton.type = 'button'; continueButton.className = 'conversation-continue-button'; continueButton.textContent = '+'; continueButton.setAttribute('aria-label', '以這段對話開始新對話');
       const messageIndex = aiConversation.indexOf(message); const previous = messageIndex > 0 && aiConversation[messageIndex - 1].role === 'user' ? aiConversation[messageIndex - 1] : null;
       continueButton.addEventListener('click', () => createNewChat(previous ? [previous, message] : [message]));
-      item.append(continueButton);
+      heading.append(saveButton, continueButton);
     }
     container.append(item);
   }

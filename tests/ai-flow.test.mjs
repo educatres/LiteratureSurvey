@@ -23,7 +23,7 @@ test('a suggested search analyzes the new results, not previously selected paper
     querySelectorAll: selector => selector === '.ai-search-button' ? allChildren(elements['ai-conversation']).filter(element => element.className.includes('ai-search-button')) : []
   };
   globalThis.Option = class extends Element { constructor(label, value) { super(); this.textContent = label; this.value = value; } };
-  globalThis.window = { confirm: () => true };
+  globalThis.window = { confirm: () => true, prompt: () => '自訂搜尋分頁' };
   globalThis.localStorage = { getItem: key => key === 'litfetch.ai.settings.v1' ? JSON.stringify({ provider: 'openai', services: { openai: { key: 'test-key', model: 'text-model' } } }) : null, setItem() {} };
   globalThis.DOMParser = class {
     parseFromString(text) {
@@ -88,6 +88,8 @@ test('a suggested search analyzes the new results, not previously selected paper
   await waitFor(() => elements['results-list'].innerHTML.includes('PMID 333'));
   const resultTabs = elements['results-round-tabs'].children;
   assert.equal(resultTabs.length, 3, 'each successful search gets its own tab');
+  resultTabs[1].children[1].dispatch('click', { stopPropagation() {} });
+  assert.equal(elements['results-round-tabs'].children[1].children[0].children[0].textContent, '自訂搜尋分頁');
   assert.match(elements['results-list'].innerHTML, /PMID 333/);
   resultTabs[1].dispatch('click');
   assert.match(elements['results-list'].innerHTML, /PMID 111/);

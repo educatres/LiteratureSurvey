@@ -230,3 +230,20 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
   .search-form input{flex-basis:calc(100% - 50px)}
   .search-examples-inline{order:2}.search-form .primary-button{order:2}
 }
+
+/* Keep per-reply actions beside the assistant label. */
+.ai-message-heading{display:flex;align-items:center;gap:6px;min-height:25px;margin-bottom:5px}
+.ai-message-heading>strong{display:block;margin:0;color:#327151;font-size:11px}
+.ai-assistant{padding-right:0!important}
+.ai-message-heading .conversation-save-button,.ai-message-heading .conversation-continue-button{position:static;flex:none;width:23px;height:23px;font-size:15px}
+
+/* One-click search-history naming and a compact results toolbar. */
+.round-tab-rename{display:inline-flex;align-items:center;justify-content:center;flex:none;width:18px;height:18px;padding:0;border:0;border-radius:50%;background:transparent;color:#668474;font-size:12px;line-height:1;opacity:.78;cursor:pointer}
+.round-tab-rename:hover:not(:disabled){background:#dcebdc;color:#2f6d4d;opacity:1}
+.round-tab-rename:focus-visible{outline:2px solid #78aa88;outline-offset:1px}
+.round-tab-rename:disabled{cursor:not-allowed}
+.results-actions .results-keyword-form{flex:none;width:215px;margin:0;padding:2px 4px 2px 8px;border-radius:7px}
+.results-actions .results-keyword-form input{width:42px;height:28px}
+.results-actions .results-keyword-form button{height:28px;padding:0 7px;font-size:10px}
+@media(min-width:1181px){.rounds-bar .round-tab-rename{width:16px;height:16px;font-size:11px}}
+@media(max-width:700px){.results-actions{width:100%}.results-actions .results-keyword-form{flex:1 1 100%;width:100%}}
