@@ -154,6 +154,20 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
 @media(min-width:701px){.ai-workspace{box-shadow:-24px 0 56px rgba(18,54,39,.22),-7px 0 20px rgba(18,54,39,.14)}}
 @media(min-width:701px){.basket-menu-content{position:fixed;height:80vh;max-height:80vh}}
 @media(min-width:701px){.ai-examples{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.ai-examples .ai-examples-note{flex:1 1 190px;margin:0}.ai-examples>div{flex:0 1 auto}}
+/* Page-number shortcuts and the compact note below the composer. */
+.pagination{gap:12px;flex-wrap:wrap}.page-links{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap}.page-link{min-width:27px;height:27px;padding:0 6px;border:1px solid #d9e3da;border-radius:6px;background:#fff;color:#51705c;font-size:11px;font-weight:720}.page-link:hover:not(:disabled){border-color:#98bba5;background:#f1f7f1}.page-link[aria-current="true"]{border-color:#2a7051;background:#2a7051;color:#fff}.page-link:disabled{cursor:default;opacity:1}.page-ellipsis{padding:0 2px;color:#8b9b91}
+.ai-examples-note{display:block;margin:6px 0 0;color:#7a9280;font-size:11px;line-height:1.5}
+@media(min-width:701px){
+  .ai-workspace{overflow:visible}
+  .ai-heading{position:relative;z-index:100}
+  .ai-help-tooltip{z-index:1000}
+  .ai-form{flex:none;margin:auto -20px 0;padding:12px 20px 12px}
+  .ai-examples-note{margin:0 -20px -20px;padding:0 20px 20px;background:#fff}
+}
+@media(min-width:701px) and (max-width:1180px){
+  .ai-form{margin:auto -18px 0;padding:12px 18px 12px}
+  .ai-examples-note{margin:0 -18px -18px;padding:0 18px 18px}
+}
 @media(min-width:1181px){
   .rounds-bar{position:sticky;top:0;align-self:start;height:100vh;max-height:100vh;overflow:hidden;z-index:4;background:#f5faf5}
   .rounds-bar .round-tabs{max-height:calc(100vh - 150px)}

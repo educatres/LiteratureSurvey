@@ -236,11 +236,35 @@ function renderResults() {
     }).join('');
   }
   $('pagination').hidden = state.total <= PAGE_SIZE;
-  $('page-label').textContent = `第 ${state.page + 1} / ${Math.ceil(state.total / PAGE_SIZE) || 1} 頁`;
+  const totalPages = Math.ceil(state.total / PAGE_SIZE) || 1;
+  $('page-label').textContent = `第 ${state.page + 1} / ${totalPages} 頁`;
+  const pageLinks = $('page-links');
+  pageLinks.replaceChildren();
+  if (state.total > PAGE_SIZE) {
+    const start = Math.max(0, state.page - 5);
+    const end = Math.min(totalPages - 1, state.page + 5);
+    if (start > 0) appendPageLink(0);
+    if (start > 1) appendPageEllipsis();
+    for (let page = start; page <= end; page += 1) appendPageLink(page);
+    if (end < totalPages - 2) appendPageEllipsis();
+    if (end < totalPages - 1) appendPageLink(totalPages - 1);
+  }
   $('prev-page').disabled = state.page === 0;
   $('next-page').disabled = (state.page + 1) * PAGE_SIZE >= state.total;
   $('select-page').disabled = state.items.length === 0 || state.isExporting;
   updateBasket();
+}
+
+function appendPageLink(page) {
+  const button = document.createElement('button');
+  button.type = 'button'; button.className = 'page-link'; button.textContent = String(page + 1);
+  button.setAttribute('aria-label', `前往第 ${page + 1} 頁`); button.setAttribute('aria-current', String(page === state.page));
+  button.disabled = page === state.page || state.isSearching;
+  button.addEventListener('click', () => changeResultPage(page));
+  $('page-links').append(button);
+}
+function appendPageEllipsis() {
+  const span = document.createElement('span'); span.className = 'page-ellipsis'; span.textContent = '…'; $('page-links').append(span);
 }
 
 function updateBasket() {
