@@ -1,18 +1,22 @@
-標題：CGUxAI 師生 AI 協作工具分享｜LiteratureSurvey：從研究問題到文獻整理的 AI 研究助理 [CGU AIR Team]
-英文標題：CGUxAI AI Collaboration Tools for Faculty and Students｜LiteratureSurvey: An AI Research Assistant for Literature Search and Organization [CGU AIR Team]
+標題：CGUxAI 師生 AI 協作工具分享｜LiteratureSurvey：邊對談、邊查詢的 AI 文獻探索與整理工具 [CGU AIR Team]
+英文標題：CGUxAI AI Collaboration Tools for Faculty and Students｜LiteratureSurvey: Explore and Organize Research Literature through AI Conversations [CGU AIR Team]
 
 中文內文：======================
 
-「從一個研究問題開始，逐步找到值得深入閱讀的文獻」
+「邊與 AI 對談，邊查找文獻，讓研究想法一步步成形」
 
 LiteratureSurvey 是專為研究生與學術研究者設計的文獻搜尋與整理工具，可免費使用，開啟網頁即可開始。
 https://educatres.github.io/LiteratureSurvey/
 
-還不確定該用哪些關鍵字？先從描述您的研究想法開始。
+一個問題，可以展開一次搜尋；一段值得留下的對話，可以成為下一個研究方向的起點。
 
-LiteratureSurvey 讓您透過 AI 對話釐清研究對象、主題與搜尋範圍，協助擬定 PubMed 搜尋式，再依出版年份、文章類型與開放取用條件篩選文獻。將感興趣的文章加入「收藏的文獻清單」，就能請 AI 根據可用摘要整理研究主題、比較研究方法與主要發現，並透過持續追問，探索下一步的搜尋方向。
+LiteratureSurvey 讓您邊跟 AI 對談、邊查詢 PubMed 文獻。從描述研究想法開始，透過來回討論釐清問題，由 AI 協助擬定搜尋式，直接查詢並分析搜尋結果的摘要，再根據找到的文獻繼續追問、調整搜尋方向。讓研究問題與文獻搜尋在同一個畫面中持續推進。
 
-LiteratureSurvey 整合 PubMed 文獻搜尋、摘要中文翻譯、AI 摘要、多篇文獻比較與批次匯出，讓找文獻、看摘要與整理線索，都能在同一個平台完成。您可以下載文獻摘要與文獻資訊 CSV，或批次取得可用的 PMC 開放取用全文 XML；每次最多 100 篇，並可透過原文連結進一步閱讀。
+對話中出現值得保留的分析或想法，可以點選愛心，將問題與 AI 回覆收進「對話筆記」，方便隨時回看；也可以選取某段對話作為起點，開啟新的對話，沿著另一個方向繼續探索，讓有價值的討論累積成可延伸的研究線索。
+
+找到感興趣的文獻，可以跨搜尋、跨頁收藏到同一份清單，再請 AI 批次整理主題、比較研究對象、方法與主要發現。閱讀個別文獻時，也能使用 AI 翻譯與 AI 摘要，將英文摘要翻成中文，或快速掌握研究目的、方法、結果與結論，協助判斷哪些文章值得進一步閱讀。
+
+LiteratureSurvey 也支援批次下載文獻摘要與文獻資訊 CSV，以及可取得的 PMC 開放取用全文 XML，每次最多 100 篇。從對談、搜尋、收藏到整理與匯出，逐步建立自己的文獻清單與研究脈絡。
 
 不同研究主題可以分別建立專案，保存搜尋紀錄、收藏文獻與 AI 對話，並支援專案匯出與匯入備份。專案資料保存在您目前使用的瀏覽器中；使用 AI 時，相關對話與文獻摘要會傳送至您選擇的 AI 服務。讓每一次搜尋與討論都能接續累積，逐步整理出自己的文獻脈絡。
 
@@ -25,16 +29,20 @@ AI 整理與比較以可用摘要為依據，研究細節仍請核對原文；�
 
 英文內文：======================
 
-“Start with a Research Question. Find the Papers Worth Reading.”
+“Talk with AI, Search the Literature, and Develop Your Research Ideas.”
 
 LiteratureSurvey is a free-to-use, browser-based tool designed for graduate students and academic researchers to search and organize research literature.
 https://educatres.github.io/LiteratureSurvey/
 
-Not sure which keywords to use? Start by describing your research idea.
+A question can launch a search. A conversation worth saving can become the starting point for a new research direction.
 
-Through AI conversations, LiteratureSurvey helps you clarify your research population, topic, and scope, then develop a PubMed search query. Filter results by publication year, article type, and open-access availability, and add relevant papers to your collection. AI can use the available abstracts to organize research themes, compare methods and key findings, and help you explore further search directions through follow-up questions.
+LiteratureSurvey lets you move between AI conversations and PubMed searches in one workspace. Describe your research idea, refine your question through discussion, and let AI help develop a search query. Run the search directly, analyze the abstracts from the results, then ask follow-up questions and adjust your search direction. Your research questions and literature searches develop together.
 
-LiteratureSurvey brings together PubMed search, Chinese translations of abstracts, AI summaries, comparisons across papers, and batch export. Download abstract text files together with citation metadata in CSV format, or retrieve available full-text XML from the PMC Open Access Subset, with up to 100 papers per export. Links to the original sources help you continue reading in depth.
+When a conversation contains a useful analysis or idea, click the heart to save the question and AI response to your conversation notes for later review. You can also use a selected exchange to start a new conversation and explore another direction, turning valuable discussions into research leads you can build on.
+
+Collect relevant papers across searches and result pages, then ask AI to organize themes and compare study populations, methods, and key findings in batches. For individual papers, AI translation turns English abstracts into Chinese, while AI summaries highlight research objectives, methods, results, and conclusions to help you decide what to read in depth.
+
+LiteratureSurvey also supports batch downloads of abstract text files and citation metadata in CSV format, as well as retrievable full-text XML from the PMC Open Access Subset, with up to 100 papers per export. Move from discussion and search to collection, synthesis, and export as you build your literature collection and develop your understanding of the research.
 
 Create separate projects for different research topics to save search history, collected papers, and AI conversations. Projects are stored in your current browser and can be exported and imported for backup. When you use AI, the relevant conversations and abstracts are sent to your selected AI service. Build on each search and discussion as you develop a clearer picture of the literature.
 
