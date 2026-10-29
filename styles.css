@@ -249,3 +249,16 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
 .results-actions .results-keyword-form button{height:28px;padding:0 7px;font-size:10px}
 @media(min-width:1181px){.rounds-bar .round-tab-rename{width:16px;height:16px;font-size:11px}}
 @media(max-width:700px){.results-actions{width:100%}.results-actions .results-keyword-form{flex:1 1 100%;width:100%}}
+
+/* Separate each exchange above its Query, then surface saved abstract assistance. */
+.ai-assistant{margin-top:0;padding-top:6px!important}
+.ai-assistant:before{display:none}
+.ai-user{position:relative;margin-top:18px}
+.ai-user:before{content:"";position:absolute;top:-10px;left:0;right:0;height:2px;border-radius:2px;background:linear-gradient(90deg,#d5e2d6,#8fb59a 45%,#d5e2d6)}
+.paper-ai-badge{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:25px;height:22px;padding:0 6px;border:1px solid;border-radius:6px;font-size:9px;font-weight:850;line-height:1;cursor:pointer}
+.paper-translation-badge{border-color:#e1a63a;background:#fff6d9;color:#885b0a}
+.paper-summary-badge{border-color:#8aa7d4;background:#eef4ff;color:#3f6195}
+.paper-ai-badge:hover,.paper-ai-badge:focus-visible{transform:translateY(-1px);box-shadow:0 3px 8px rgba(35,65,48,.14)}
+.paper-ai-badge:focus-visible{outline:2px solid #efc76d;outline-offset:2px}
+.paper-ai-badge:after{content:attr(data-tooltip);position:absolute;z-index:30;left:50%;bottom:calc(100% + 7px);width:max-content;max-width:210px;padding:6px 8px;border:1px solid #d7e2d8;border-radius:6px;background:#263e34;color:#fff;box-shadow:0 6px 16px rgba(20,46,33,.2);font-size:10px;font-weight:650;line-height:1.35;white-space:nowrap;pointer-events:none;opacity:0;transform:translate(-50%,3px);transition:opacity .14s,transform .14s}
+.paper-ai-badge:hover:after,.paper-ai-badge:focus-visible:after{opacity:1;transform:translate(-50%,0)}
