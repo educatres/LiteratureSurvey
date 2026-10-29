@@ -806,7 +806,6 @@ function showProjectGate(message = '') {
   $('project-gate').hidden = false;
   $('topbar-right').hidden = true;
   $('app-main').hidden = true;
-  $('app-footer').hidden = true;
   renderProjectList();
   if (message) projectStorageNotice(message);
 }
@@ -815,7 +814,6 @@ function showApp() {
   $('project-gate').hidden = true;
   $('topbar-right').hidden = false;
   $('app-main').hidden = false;
-  $('app-footer').hidden = false;
 }
 
 function resetWorkspaceRuntime() {
