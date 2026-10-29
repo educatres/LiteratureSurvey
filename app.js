@@ -575,20 +575,35 @@ function clearWorkspace() {
   if (aiAbort || state.isSearching || state.isExporting) {
     storageNotice('請先等搜尋、分析或下載完成，或取消進行中的作業。', true); return;
   }
-  if (!window.confirm('清除這個瀏覽器的所有搜尋結果、文獻清單、摘要及 AI 對話？已儲存的 AI API Key 不會清除。')) return;
+  if (!window.confirm('清除這個瀏覽器的所有搜尋結果、摘要及 AI 對話嗎？「我的文獻清單」中的文獻不會刪除。')) return;
   try { localStorage.removeItem(WORKSPACE_STORAGE); }
   catch { storageNotice('無法清除瀏覽器儲存的搜尋紀錄，請檢查瀏覽器設定。', true); return; }
   clearTimeout(saveTimer); saveTimer = null; workspaceGeneration++; storageBlocked = false;
   rounds.splice(0, rounds.length, { id: 0, label: '初始對話', parent: null, snapshot: null });
   activeRoundId = 0; nextRoundId = 1; aiConversation = [];
-  state.selected.clear(); state.abstractCache.clear(); state.searchSource = 'ncbi';
+  state.searchSource = 'ncbi';
   for (const id of WORKSPACE_FIELDS) {
     if (id === 'open-access') $(id).checked = false;
     else $(id).value = id === 'sort-by' ? 'relevance' : '';
   }
   if ($('abstract-dialog').open) $('abstract-dialog').close();
   restoreRound(activeRound()); renderRoundTabs(); renderAiConversation(); aiMessage('');
-  storageNotice('已清除搜尋紀錄、文獻清單與對話；AI 金鑰設定保留。');
+  storageNotice('已清除搜尋紀錄與對話；我的文獻清單及 AI 金鑰設定保留。');
+}
+
+function removeRound(roundId) {
+  if (aiAbort || state.isSearching || state.isExporting) {
+    storageNotice('請先等搜尋、分析或下載完成，或取消進行中的作業。', true); return;
+  }
+  const round = rounds.find(item => item.id === roundId);
+  if (!round || round.id === 0) return;
+  if (!window.confirm(`確定要清除「${round.label}」搜尋記錄嗎？「我的文獻清單」中的文獻不會刪除。`)) return;
+  const index = rounds.findIndex(item => item.id === roundId);
+  rounds.splice(index, 1);
+  aiConversation = aiConversation.filter(message => message.roundId !== roundId);
+  if (activeRoundId === roundId) activeRoundId = rounds[Math.max(0, index - 1)]?.id ?? 0;
+  restoreRound(activeRound());
+  renderRoundTabs(); renderAiConversation(); updateAiScope(); persistWorkspace();
 }
 
 function activeRound() { return rounds.find(round => round.id === activeRoundId); }
@@ -631,14 +646,22 @@ function renderRoundTabs() {
   for (const id of ['results-round-tabs', 'ai-round-tabs']) {
     const container = $(id); container.replaceChildren();
     for (const round of rounds) {
-      const button = document.createElement('button'); button.type = 'button'; button.className = 'round-tab';
-      button.textContent = round.label; button.title = round.label; button.setAttribute('aria-pressed', String(round.id === activeRoundId));
-      button.disabled = Boolean(aiAbort || state.isSearching);
-      button.addEventListener('click', () => {
+      const tab = document.createElement('div'); tab.className = 'round-tab';
+      const select = document.createElement('button'); select.type = 'button'; select.className = 'round-tab-select';
+      const label = document.createElement('span'); label.className = 'round-tab-label'; label.textContent = round.label; select.append(label); tab.append(select);
+      let close = null;
+      if (round.id !== 0) {
+        close = document.createElement('button'); close.type = 'button'; close.className = 'round-tab-close'; close.textContent = '×';
+        close.setAttribute('aria-label', '清除這筆搜尋記錄'); tab.append(close);
+      }
+      tab.title = round.label; tab.setAttribute('aria-pressed', String(round.id === activeRoundId));
+      tab.setAttribute('aria-disabled', String(Boolean(aiAbort || state.isSearching))); select.disabled = Boolean(aiAbort || state.isSearching); if (close) close.disabled = select.disabled;
+      tab.addEventListener('click', () => {
         if (aiAbort || state.isSearching || round.id === activeRoundId) return;
         activeRoundId = round.id; restoreRound(round); renderRoundTabs(); renderAiConversation(); aiMessage(''); persistWorkspace();
       });
-      container.append(button);
+      close?.addEventListener('click', event => { event.stopPropagation(); removeRound(round.id); });
+      container.append(tab);
     }
   }
 }
@@ -801,7 +824,6 @@ loadWorkspace();
 updateAiScope();
 renderRoundTabs();
 renderAiConversation();
-$('clear-workspace').addEventListener('click', clearWorkspace);
 for (const id of WORKSPACE_FIELDS) {
   $(id).addEventListener('input', scheduleWorkspaceSave);
   $(id).addEventListener('change', scheduleWorkspaceSave);
