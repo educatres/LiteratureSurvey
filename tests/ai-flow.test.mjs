@@ -12,6 +12,8 @@ test('a suggested search analyzes the new results, not previously selected paper
     setAttribute() {}
     querySelector() { return this.span ||= new Element(); }
     focus() {}
+    showModal() { this.open = true; }
+    close() { this.open = false; this.dispatch('close'); }
   }
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   const elements = Object.fromEntries([...html.matchAll(/\bid="([^"]+)"/g)].map(match => [match[1], new Element()]));
@@ -127,4 +129,17 @@ test('a suggested search analyzes the new results, not previously selected paper
   await waitFor(() => prompts.length === 4 && !elements['ai-send'].disabled);
   assert.equal(elements['ai-conversation'].children.length, 1, 'the preset analysis question is not rendered as a user message');
   assert.match(elements['ai-conversation'].children[0].className, /ai-assistant/);
+  elements['results-list'].dispatch('click', { target: { closest: () => ({ dataset: { preview: '333' } }) } });
+  assert.equal(elements['abstract-dialog'].open, true);
+  await waitFor(() => elements['abstract-body'].textContent.includes('abstract text 333'));
+  assert.match(elements['abstract-body'].textContent, /abstract text 333/);
+  elements['abstract-translate'].dispatch('click');
+  await waitFor(() => prompts.length === 5 && !elements['abstract-translate'].disabled);
+  assert.match(prompts[4], /完整翻譯成繁體中文/);
+  assert.equal(elements['abstract-translation-panel'].hidden, false);
+  assert.match(elements['abstract-translation'].textContent, /整理新文獻/);
+  elements['abstract-summarize'].dispatch('click');
+  await waitFor(() => prompts.length === 6 && !elements['abstract-summarize'].disabled);
+  assert.match(prompts[5], /研究目的／方法／主要結果／結論/);
+  assert.equal(elements['abstract-summary-panel'].hidden, false);
 });

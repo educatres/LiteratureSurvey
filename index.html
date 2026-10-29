@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#f7f8f5">
   <meta name="description" content="搜尋 PubMed、篩選與挑選文獻，批次下載摘要及可合法取得的開放取用全文。">
   <title>LiteratureSurvey — PubMed 文獻批次下載工作台</title>
-  <link rel="stylesheet" href="./styles.css?v=20261029-34">
-  <script type="module" src="./app.js?v=20261029-34"></script>
+  <link rel="stylesheet" href="./styles.css?v=20261029-35">
+  <script type="module" src="./app.js?v=20261029-35"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -57,7 +57,7 @@
           <div id="ai-conversation" class="ai-conversation" aria-live="polite"><p class="ai-empty">選取文獻後開始整理，也可以直接輸入研究問題。</p></div>
           <p id="ai-status" class="ai-status" role="status" aria-live="polite"></p>
           <form id="ai-form" class="ai-form"><label class="sr-only" for="ai-question">Query</label><textarea id="ai-question" rows="2" placeholder="例如：我想找成人第二型糖尿病患者的運動介入研究，該如何縮小範圍？"></textarea><button type="submit" class="ai-primary" id="ai-send">送出問題 →</button></form>
-          <div class="ai-examples-row"><small class="ai-examples-note">AI會分析「收藏的文獻清單」中已選取的文獻摘要。</small><div class="ai-examples" aria-label="對話範例"><div><button type="button" id="ai-analyze" class="ai-primary">整理文獻並提出問題</button><button type="button" id="ai-example-organize">整理收藏的文獻清單</button><button type="button" id="ai-example-compare">摘要與比較研究</button><button type="button" id="ai-example-extend">根據清單延伸搜尋</button></div></div></div>
+          <div class="ai-examples-row"><small class="ai-examples-note">AI會分析「收藏的文獻清單」中收錄文獻的摘要。</small><div class="ai-examples" aria-label="對話範例"><div><button type="button" id="ai-analyze" class="ai-primary">整理文獻並提出問題</button><button type="button" id="ai-example-organize">整理收藏的文獻清單</button><button type="button" id="ai-example-compare">摘要與比較研究</button><button type="button" id="ai-example-extend">根據清單延伸搜尋</button></div></div></div>
         </div>
       </section>
       </div>
@@ -66,7 +66,7 @@
     <footer class="footer"><span>LiteratureSurvey · Research made lighter</span><span>資料來源 <a href="https://pubmed.ncbi.nlm.nih.gov/" target="_blank" rel="noopener noreferrer">NCBI PubMed</a> ／ <a href="https://pmc.ncbi.nlm.nih.gov/tools/openftlist/" target="_blank" rel="noopener noreferrer">PMC Open Access</a> ／ <a href="https://europepmc.org/" target="_blank" rel="noopener noreferrer">Europe PMC</a></span><span>PubMed 摘要及全文著作權可能屬於作者或出版社，使用者須遵守個別授權。本站非 NCBI 官方產品。</span></footer>
   </div>
 
-  <dialog id="abstract-dialog" class="abstract-dialog"><div class="dialog-top"><span class="section-overline">ARTICLE PREVIEW</span><button type="button" class="close-dialog" id="close-abstract" aria-label="關閉摘要">×</button></div><h2 id="abstract-title"></h2><p id="abstract-meta"></p><div id="abstract-body"></div><div class="dialog-foot"><a id="abstract-pubmed-link" href="#" target="_blank" rel="noopener noreferrer">在 PubMed 開啟 ↗</a><button type="button" class="subtle-button" id="close-abstract-bottom">關閉</button></div></dialog>
+  <dialog id="abstract-dialog" class="abstract-dialog"><div class="dialog-top"><span class="section-overline">ARTICLE PREVIEW</span><button type="button" class="close-dialog" id="close-abstract" aria-label="關閉摘要">×</button></div><h2 id="abstract-title"></h2><p id="abstract-meta"></p><div class="abstract-columns"><aside id="abstract-side-results" class="abstract-side-results" hidden aria-live="polite"><section id="abstract-translation-panel" class="abstract-ai-panel" hidden><h3>中文翻譯</h3><div id="abstract-translation"></div></section><section id="abstract-summary-panel" class="abstract-ai-panel" hidden><h3>AI 摘要</h3><div id="abstract-summary"></div></section></aside><div id="abstract-body"></div></div><div class="dialog-foot"><a id="abstract-pubmed-link" href="#" target="_blank" rel="noopener noreferrer">在 PubMed 開啟 ↗</a><div class="abstract-dialog-actions"><button type="button" class="subtle-button" id="abstract-translate">翻譯</button><button type="button" class="subtle-button" id="abstract-summarize">AI 摘要</button><button type="button" class="subtle-button" id="close-abstract-bottom">關閉</button></div></div></dialog>
   <dialog id="progress-dialog" class="progress-dialog"><span class="section-overline">EXPORTING ARTICLES</span><h2 id="progress-title">正在整理文獻…</h2><p id="progress-description" role="status" aria-live="polite"></p><progress id="download-progress" max="100" value="0"></progress><button type="button" id="cancel-download" class="subtle-button">取消下載</button></dialog>
 </body>
 </html>
