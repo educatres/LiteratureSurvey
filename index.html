@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f8f5">
   <meta name="description" content="搜尋 PubMed、篩選與挑選文獻，批次下載摘要及可合法取得的開放取用全文。">
   <title>LiteratureSurvey</title>
-  <link rel="stylesheet" href="./styles.css?v=20261030-50">
+  <link rel="stylesheet" href="./styles.css?v=20261030-51">
   <script type="module" src="./app.js?v=20261030-50"></script>
 </head>
 <body>
@@ -20,6 +20,7 @@
     </header>
 
     <section id="project-gate" class="project-gate" aria-labelledby="project-gate-title">
+      <div class="project-gate-layout">
       <div class="project-gate-card">
         <div class="project-gate-heading">
           <span class="section-overline">LITERATURESURVEY</span>
@@ -34,6 +35,8 @@
           <div class="project-create-row"><input id="project-name" type="text" maxlength="80" placeholder="例如：博士論文、癌症研究" autocomplete="off" required><button type="submit" class="primary-button">建立並進入</button></div>
         </form>
         <p id="project-gate-status" class="storage-status" role="status" aria-live="polite" hidden></p>
+      </div>
+      <div class="project-gate-art"><img src="./assets/pubmed-research-assistant.png" alt="PubMed research assistant illustration"></div>
       </div>
     </section>
 
