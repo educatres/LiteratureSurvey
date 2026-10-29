@@ -616,10 +616,6 @@ for (const menu of topbarMenus) menu.addEventListener('toggle', () => {
   if (menu.classList.contains('basket-menu')) positionBasketMenu();
 });
 globalThis.addEventListener?.('resize', positionBasketMenu);
-document.querySelectorAll('.example-query').forEach(button => button.addEventListener('click', () => {
-  $('query').value = button.dataset.query;
-  manualSearch();
-}));
 $('results-list').addEventListener('change', event => {
   if (event.target.matches('.paper-checkbox')) togglePaper(event.target.dataset.pmid, event.target.checked);
 });
