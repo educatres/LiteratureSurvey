@@ -582,6 +582,8 @@ let aiConversation = [];
 let aiAbort = null;
 let aiTestAbort = null;
 let conversationSequence = 0;
+let activeChatId = 'chat-1';
+let chatSequence = 1;
 
 const WORKSPACE_STORAGE = 'literaturesurvey.workspace.v1';
 const WORKSPACE_FIELDS = ['query', 'year-from', 'year-to', 'article-type', 'sort-by', 'open-access', 'results-keyword', 'contact-email', 'ai-question'];
@@ -601,7 +603,7 @@ function persistWorkspace() {
   try {
     const fields = Object.fromEntries(WORKSPACE_FIELDS.map(id => [id, id === 'open-access' ? $(id).checked : $(id).value]));
     localStorage.setItem(WORKSPACE_STORAGE, encodeWorkspace({ rounds, activeRoundId, nextRoundId,
-      selected: state.selected, abstracts: state.abstractCache, conversation: aiConversation, fields }));
+      selected: state.selected, abstracts: state.abstractCache, conversation: aiConversation, fields, activeChatId, chatSequence }));
     storageNotice('');
   } catch {
     storageNotice('無法儲存搜尋紀錄，瀏覽器空間可能已滿或儲存功能遭封鎖；重新整理可能遺失最新變更。', true);
@@ -620,6 +622,11 @@ function loadWorkspace() {
     activeRoundId = saved.activeRoundId; nextRoundId = saved.nextRoundId;
     state.selected = saved.selected; state.abstractCache = saved.abstracts;
     aiConversation = saved.conversation;
+    activeChatId = saved.activeChatId || 'chat-1'; chatSequence = saved.chatSequence || 1;
+    for (const message of aiConversation) message.chatId ||= 'chat-1';
+    const availableChatIds = new Set(['chat-1', ...aiConversation.map(message => message.chatId).filter(Boolean)]);
+    if (!availableChatIds.has(activeChatId)) activeChatId = 'chat-1';
+    chatSequence = Math.max(chatSequence, ...[...availableChatIds].map(id => Number(String(id).replace('chat-', '')) || 1));
     restoreRound(activeRound());
     for (const id of WORKSPACE_FIELDS) {
       if (id === 'open-access') $(id).checked = Boolean(saved.fields[id]);
@@ -642,7 +649,7 @@ function clearWorkspace() {
   catch { storageNotice('無法清除瀏覽器儲存的搜尋紀錄，請檢查瀏覽器設定。', true); return; }
   clearTimeout(saveTimer); saveTimer = null; workspaceGeneration++; storageBlocked = false;
   rounds.splice(0, rounds.length, { id: 0, label: '初始對話', parent: null, snapshot: null });
-  activeRoundId = 0; nextRoundId = 1; aiConversation = [];
+  activeRoundId = 0; nextRoundId = 1; aiConversation = []; activeChatId = 'chat-1'; chatSequence = 1;
   state.searchSource = 'ncbi';
   for (const id of WORKSPACE_FIELDS) {
     if (id === 'open-access') $(id).checked = false;
@@ -696,7 +703,28 @@ function restoreRound(round) {
   }
 }
 function conversationContext() {
-  return aiConversation.map(({ role, content, searchQuery }) => ({ role, content, ...(searchQuery ? { searchQuery } : {}) }));
+  return aiConversation.filter(message => message.chatId === activeChatId).map(({ role, content, searchQuery }) => ({ role, content, ...(searchQuery ? { searchQuery } : {}) }));
+}
+function chatLabel(chatId) { return String(Number(chatId.replace('chat-', '')) || 1).padStart(2, '0'); }
+function chatIds() {
+  const ids = new Set(['chat-1']);
+  for (const message of aiConversation) if (message.chatId) ids.add(message.chatId);
+  return [...ids].sort((a, b) => Number(a.replace('chat-', '')) - Number(b.replace('chat-', '')));
+}
+function renderChatTabs() {
+  const container = $('ai-chat-tabs'); container.replaceChildren();
+  for (const chatId of chatIds()) {
+    const tab = document.createElement('button'); tab.type = 'button'; tab.className = 'ai-chat-tab'; tab.textContent = chatLabel(chatId);
+    tab.setAttribute('role', 'tab'); tab.setAttribute('aria-selected', String(chatId === activeChatId)); tab.disabled = Boolean(aiAbort || chatId === activeChatId);
+    tab.addEventListener('click', () => { if (aiAbort || chatId === activeChatId) return; activeChatId = chatId; renderAiConversation(); persistWorkspace(); });
+    container.append(tab);
+  }
+}
+function createNewChat(seed = []) {
+  chatSequence = Math.max(chatSequence, ...chatIds().map(id => Number(id.replace('chat-', '')) || 1));
+  const chatId = `chat-${++chatSequence}`; activeChatId = chatId;
+  aiConversation.push(...seed.map(message => ({ ...message, id: undefined, chatId, noted: false, ...(message.role === 'user' ? { hidden: false } : {}) })));
+  renderAiConversation(); persistWorkspace();
 }
 function ensureConversationIds() {
   for (const message of aiConversation) {
@@ -790,9 +818,10 @@ function updateAiScope() {
 }
 function renderAiConversation() {
   ensureConversationIds();
+  renderChatTabs();
   const container = $('ai-conversation');
   container.replaceChildren();
-  const messages = aiConversation.filter(message => !isHiddenConversationQuestion(message));
+  const messages = aiConversation.filter(message => message.chatId === activeChatId && !isHiddenConversationQuestion(message));
   if (!messages.length) {
     const empty = document.createElement('p'); empty.className = 'ai-empty'; empty.textContent = '選取文獻後開始整理，也可以直接輸入研究問題。'; container.append(empty);
   }
@@ -818,6 +847,10 @@ function renderAiConversation() {
       saveButton.textContent = message.noted ? '♥' : '♡'; saveButton.setAttribute('aria-label', message.noted ? '從對話筆記移除' : '加入對話筆記'); saveButton.setAttribute('aria-pressed', String(Boolean(message.noted)));
       saveButton.addEventListener('click', () => { message.noted = !message.noted; renderAiConversation(); persistWorkspace(); });
       item.append(saveButton);
+      const continueButton = document.createElement('button'); continueButton.type = 'button'; continueButton.className = 'conversation-continue-button'; continueButton.textContent = '+'; continueButton.setAttribute('aria-label', '以這段對話開始新對話');
+      const messageIndex = aiConversation.indexOf(message); const previous = messageIndex > 0 && aiConversation[messageIndex - 1].role === 'user' ? aiConversation[messageIndex - 1] : null;
+      continueButton.addEventListener('click', () => createNewChat(previous ? [previous, message] : [message]));
+      item.append(continueButton);
     }
     container.append(item);
   }
@@ -836,12 +869,12 @@ function renderNotebook() {
     const title = document.createElement('strong'); title.textContent = question.slice(0, 80) || 'AI 對話';
     const preview = document.createElement('span'); preview.textContent = assistant.content.replace(/\s+/g, ' ').slice(0, 140);
     entry.append(title, preview);
-    entry.addEventListener('click', () => { $('notebook-menu').open = false; document.getElementById(`ai-message-${assistant.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+    entry.addEventListener('click', () => { activeChatId = assistant.chatId || activeChatId; renderAiConversation(); $('notebook-menu').open = false; document.getElementById(`ai-message-${assistant.id}`)?.scrollIntoView?.({ behavior: 'smooth', block: 'center' }); });
     list.append(entry);
   }
 }
 function setAiBusy(busy) {
-  for (const id of ['ai-analyze', 'ai-send', 'ai-clear-conversation', 'ai-settings-toggle', 'ai-example-organize', 'ai-example-compare', 'ai-example-extend']) $(id).disabled = busy;
+  for (const id of ['ai-analyze', 'ai-send', 'ai-new-conversation', 'ai-clear-conversation', 'ai-settings-toggle', 'ai-example-organize', 'ai-example-compare', 'ai-example-extend']) $(id).disabled = busy;
   $('ai-cancel').hidden = !busy;
   document.querySelectorAll('.ai-search-button').forEach(button => { button.disabled = busy; });
   renderRoundTabs();
@@ -869,7 +902,7 @@ async function runAiAnalysis(question, { papers, query, config, controller, hide
   const answer = await generateText({ ...config, prompt, signal: controller.signal });
   if (controller.signal.aborted) throw abortError();
   const suggestion = extractSearchSuggestion(answer);
-  aiConversation.push({ role: 'user', content: question, roundId: activeRoundId, ...(hideQuestion ? { hidden: true } : {}) }, { role: 'assistant', content: suggestion.text, searchQuery: suggestion.query, roundId: activeRoundId });
+  aiConversation.push({ role: 'user', content: question, roundId: activeRoundId, chatId: activeChatId, ...(hideQuestion ? { hidden: true } : {}) }, { role: 'assistant', content: suggestion.text, searchQuery: suggestion.query, roundId: activeRoundId, chatId: activeChatId });
   renderAiConversation();
   aiMessage(`分析完成：使用 ${papers.length} 篇文獻，其中 ${available} 篇有摘要。請核對原文。`);
   $('ai-question').value = '';
@@ -959,10 +992,12 @@ $('ai-example-compare').addEventListener('click', () => askAi('請逐篇摘要�
 $('ai-example-extend').addEventListener('click', () => askAi('請根據「收藏的文獻清單」的摘要，歸納研究方向與可能的研究缺口，提出能幫助我縮小範圍的問題；資訊足夠時，提供適合延伸查找相關文獻的 PubMed 搜尋式。', { requireSelection: true }));
 $('ai-form').addEventListener('submit', event => { event.preventDefault(); const question = $('ai-question').value.trim(); if (question) askAi(question); });
 $('ai-cancel').addEventListener('click', () => aiAbort?.abort());
+$('ai-new-conversation').addEventListener('click', () => createNewChat());
+$('notebook-close').addEventListener('click', () => { $('notebook-menu').open = false; });
 $('ai-clear-conversation').addEventListener('click', () => {
   if (!aiConversation.length) { aiMessage('目前沒有可清除的對話記錄。'); return; }
   if (!window.confirm('確定要清除所有 AI 對話記錄嗎？這不會刪除搜尋記錄或「收藏的文獻清單」。')) return;
-  aiConversation = [];
+  aiConversation = []; activeChatId = 'chat-1'; chatSequence = 1;
   renderAiConversation(); aiMessage('已清除對話記錄。'); persistWorkspace();
 });
 $('ai-download').addEventListener('click', () => {

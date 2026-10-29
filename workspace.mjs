@@ -1,10 +1,10 @@
 // Keep browser storage JSON-compatible while preserving cursor maps in memory.
-export function encodeWorkspace({ rounds, activeRoundId, nextRoundId, selected, abstracts, conversation, fields }) {
+export function encodeWorkspace({ rounds, activeRoundId, nextRoundId, selected, abstracts, conversation, fields, activeChatId = 'chat-1', chatSequence = 1 }) {
   return JSON.stringify({ version: 1, activeRoundId, nextRoundId,
     rounds: rounds.map(round => ({ ...round, snapshot: round.snapshot && {
       ...round.snapshot, cursors: [...round.snapshot.cursors]
     } })),
-    selected: [...selected], abstracts: [...abstracts], conversation, fields
+    selected: [...selected], abstracts: [...abstracts], conversation, fields, activeChatId, chatSequence
   });
 }
 
@@ -40,5 +40,7 @@ export function decodeWorkspace(raw) {
   for (const message of saved.conversation) if (!message || !ids.has(message.roundId) || !['user', 'assistant'].includes(message.role) || typeof message.content !== 'string' || (message.searchQuery !== undefined && typeof message.searchQuery !== 'string')) throw new Error('Invalid message');
   if (!saved.selected.every(entry => Array.isArray(entry) && entry.length === 2 && validPaper(entry[1]) && entry[0] === entry[1].pmid) ||
       !saved.abstracts.every(entry => Array.isArray(entry) && entry.length === 2 && /^\d+$/.test(entry[0]) && typeof entry[1] === 'string')) throw new Error('Invalid saved papers');
-  return { ...saved, rounds, selected: new Map(saved.selected), abstracts: new Map(saved.abstracts) };
+  const activeChatId = typeof saved.activeChatId === 'string' && /^chat-\d+$/.test(saved.activeChatId) ? saved.activeChatId : 'chat-1';
+  const chatSequence = Number.isSafeInteger(saved.chatSequence) && saved.chatSequence >= 1 ? saved.chatSequence : 1;
+  return { ...saved, rounds, selected: new Map(saved.selected), abstracts: new Map(saved.abstracts), activeChatId, chatSequence };
 }
