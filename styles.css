@@ -164,6 +164,13 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
 
 .project-gate{min-height:calc(100vh - 90px);display:grid;place-items:center;padding:40px 20px;background:linear-gradient(145deg,#f7f8f5,#eef6ef)}
 .project-gate[hidden],.topbar-right[hidden]{display:none!important}
+.project-card-actions .text-button{min-height:32px;padding:6px 10px;border:1px solid #cbdccf;border-radius:7px;background:#fff;color:#456b54;white-space:nowrap;transition:background .15s,border-color .15s}
+.project-card-actions .text-button:hover{border-color:#98bba5;background:#eef6ef;text-decoration:none}
+.project-card-actions .text-button:active{background:#dfeee3}
+.project-card-actions .text-button:focus-visible{outline:2px solid #78aa88;outline-offset:2px}
+.project-card-actions .danger-button{border-color:#e5c4bd;color:#a54534}
+.project-card-actions .danger-button:hover{border-color:#cf9a8e;background:#fff1ed}
+.project-card-actions .danger-button:active{background:#f9dfd7}
 .project-gate-card{width:min(680px,100%);padding:34px;border:1px solid #d5e3d6;border-radius:18px;background:#fff;box-shadow:0 18px 50px rgba(22,59,45,.12)}
 .project-gate-heading h1{margin:7px 0 8px;color:#264c3b;font-size:30px}.project-gate-heading p{margin:0;color:#71877a;font-size:14px;line-height:1.7}
 .project-list{display:grid;gap:10px;margin:28px 0 20px}.project-card{display:flex;align-items:stretch;gap:10px;padding:0;border:1px solid #dce9dc;border-radius:10px;background:#fbfdfb}.project-card-open{display:grid;flex:1;gap:5px;padding:16px;border:0;background:transparent;color:#274438;text-align:left;cursor:pointer}.project-card-open:hover{background:#f1f8f2}.project-card-open strong{font-size:15px}.project-card-open span{color:#7b9180;font-size:11px}.project-card-actions{display:flex;align-items:center;gap:4px;padding:0 10px}.danger-button{color:#a54534}.project-empty{padding:17px;border:1px dashed #d4e3d5;border-radius:9px;color:#7b9180;font-size:13px}.project-transfer-actions{display:flex;justify-content:flex-end;margin-top:18px}.project-create-form{margin-top:24px;padding-top:20px;border-top:1px solid #e4ece4}.project-create-row{display:flex;gap:9px;margin-top:7px}.project-create-row input{min-width:0;flex:1;border:1px solid #d4e2d6;border-radius:7px;padding:11px 12px;background:#fff;color:#274438;font:inherit}.project-create-row input:focus{outline:2px solid #b6dec3;outline-offset:1px}.project-create-row .primary-button{height:42px;white-space:nowrap}.project-gate .storage-status{margin-top:14px}.project-switch{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
