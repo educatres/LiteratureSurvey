@@ -23,7 +23,7 @@ test('a suggested search analyzes the new results, not previously selected paper
     querySelectorAll: selector => selector === '.ai-search-button' ? allChildren(elements['ai-conversation']).filter(element => element.className.includes('ai-search-button')) : []
   };
   globalThis.Option = class extends Element { constructor(label, value) { super(); this.textContent = label; this.value = value; } };
-  globalThis.localStorage = { getItem: () => JSON.stringify({ provider: 'openai', services: { openai: { key: 'test-key', model: 'text-model' } } }), setItem() {} };
+  globalThis.localStorage = { getItem: key => key === 'litfetch.ai.settings.v1' ? JSON.stringify({ provider: 'openai', services: { openai: { key: 'test-key', model: 'text-model' } } }) : null, setItem() {} };
   globalThis.DOMParser = class {
     parseFromString(text) {
       const pmid = text.match(/abstract-(\d+)/)?.[1];

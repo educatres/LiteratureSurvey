@@ -1,0 +1,26 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { encodeWorkspace, decodeWorkspace } from '../workspace.mjs';
+
+test('workspace restores result pages, cursors, selections, abstracts, conversation and draft', () => {
+  const paper = { pmid: '123', pmcid: 'PMC123', doi: '', title: 'Study', journal: 'Journal', date: '', year: '2025', authors: [], type: [] };
+  const snapshot = { baseQuery: 'cancer', filters: {}, sort: 'relevance', query: '(cancer)', page: 1, total: 21,
+    items: [paper], source: 'europepmc', cursors: new Map([[0, '*'], [1, 'next']]),
+    pages: { 0: { items: [paper], total: 21, source: 'europepmc' } } };
+  const original = { rounds: [{ id: 0, label: '初始對話', parent: null, snapshot }, { id: 1, label: '搜尋', parent: 0, snapshot: null }],
+    activeRoundId: 0, nextRoundId: 2, selected: new Map([['123', paper]]), abstracts: new Map([['123', 'Abstract']]),
+    conversation: [{ roundId: 0, role: 'assistant', content: 'Answer', searchQuery: 'cancer' }], fields: { query: 'draft' } };
+  const restored = decodeWorkspace(encodeWorkspace(original));
+  assert.equal(restored.rounds[0].snapshot.cursors.get(1), 'next');
+  assert.equal(restored.rounds[0].snapshot.pages[0].items[0].pmid, '123');
+  assert.equal(restored.selected.get('123').title, 'Study');
+  assert.equal(restored.abstracts.get('123'), 'Abstract');
+  assert.equal(restored.conversation[0].searchQuery, 'cancer');
+  assert.equal(restored.fields.query, 'draft');
+});
+
+test('corrupt or unsafe stored data is rejected instead of partially restored', () => {
+  assert.throws(() => decodeWorkspace('{'));
+  assert.throws(() => decodeWorkspace(JSON.stringify({ version: 1, rounds: [{ id: 0, label: 'x', parent: null, snapshot: null }],
+    activeRoundId: 0, nextRoundId: 1, selected: [['123', { pmid: '123" onclick="alert(1)' }]], abstracts: [], conversation: [], fields: {} })));
+});

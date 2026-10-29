@@ -41,3 +41,6 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
 .ai-message-body th,.ai-message-body td{border:1px solid #dbe8dd;padding:5px 8px;text-align:left;vertical-align:top}
 .ai-message-body th{background:#edf6ee}
 .ai-message-body hr{border:0;border-top:1px solid #dbe8dd;margin:12px 0}
+.storage-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.storage-status{margin:0 0 6px;color:#71877a;font-size:11px;line-height:1.5}
+.storage-status.error{color:#a54534}

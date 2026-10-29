@@ -10,15 +10,16 @@
 - 直接查看摘要、PubMed、PMC 與 DOI 連結。
 - 將摘要 TXT、`metadata.csv` 和結果報告打包為 ZIP。
 - 僅將 **PMC Open Access Subset** 內、且 Europe PMC 官方全文 API 可取得的全文 XML 打包為 ZIP；無全文的項目會記錄在報告中，不會嘗試規避付費牆。
-- 使用者可選填自己的 **NCBI API Key** 與聯絡 Email；不會寫入 localStorage、cookie、網址導覽或程式庫。
+- 使用者可選填自己的 **NCBI API Key** 與聯絡 Email；NCBI Key 僅存在頁面工作階段，不會寫入 localStorage、cookie、網址導覽或程式庫。
 - 可選擇 CGU、OpenAI、Grok（xAI）或 Google AI Studio，以已選文獻（未選時為目前搜尋結果）摘要進行 AI 整理與多輪探索，或先請 AI 協助擬定搜尋條件。可下載對話報告。
+- 搜尋及對話分頁、已瀏覽的搜尋結果、文獻清單、摘要與輸入草稿會自動保存在本瀏覽器的 localStorage，重新整理後恢復；可透過「清除所有搜尋紀錄」刪除，AI 金鑰設定則需另行清除。
 
 > 這不是 AI Skill 的必要使用情境：PubMed 搜尋與匯出可完全透過官方 API 實作。**OpenAI API Key 無法代替 NCBI API Key，也無法解鎖付費論文**。
 
 ## GitHub Pages 部署
 
 1. 在 GitHub 建立一個新的**公開** Repository，例如 `litfetch`。
-2. 將網站檔案放到 Repository 的根目錄，包含 `index.html`、`styles.css`、`app.js`、`ai.mjs`、`domain.mjs`、`zip.mjs` 和 `.nojekyll`。
+2. 將網站檔案放到 Repository 的根目錄，包含 `index.html`、`styles.css`、`app.js`、`ai.mjs`、`domain.mjs`、`zip.mjs`、`markdown.mjs`、`workspace.mjs`、`vendor/` 和 `.nojekyll`。
 3. 開啟 Repository **Settings → Pages → Build and deployment**。
 4. Source 選 **Deploy from a branch**；Branch 選 `main`，Folder 選 `/(root)`，按 **Save**。
 5. 等 GitHub Pages 部署完成，網站會出現在 `https://<username>.github.io/<repository>/`。
@@ -41,6 +42,7 @@ npm test
 
 ## API Key、隱私及使用限制
 
+- 搜尋紀錄、AI 對話、文獻摘要、篩選條件及聯絡 Email 會保存在此瀏覽器，未加密；共用裝置上的其他使用者或同源網站程式可能讀取。瀏覽器儲存空間有限，若儲存失敗，畫面會顯示提示。
 - AI 功能的 API Key 與模型設定在按下「儲存設定」後保存在本機瀏覽器的 localStorage，未加密。網站同源程式、瀏覽器擴充功能及能使用此瀏覽器的人可能讀取，請避免在共用裝置使用；每個服務可各自清除。這與下述不儲存的 NCBI Key 不同。
 - 使用 AI 時，問題、對話、文獻標題、期刊、年份、PMID 與可用摘要會直接傳送至所選 AI 服務，可能依服務及模型計費。請遵守各服務及文獻的使用規範；AI 結果應與原文核對。
 - 「測試連線並讀取模型」會呼叫服務的模型列表，成功不代表選定模型一定有生成權限。若列表不可用，可以手動輸入模型 ID。某些服務可能不允許瀏覽器跨來源連線（CORS），此靜態網站無法繞過服務端限制。
