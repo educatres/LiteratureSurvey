@@ -1,0 +1,47 @@
+標題：CGUxAI 師生 AI 協作工具分享｜LiteratureSurvey：從研究問題到文獻整理的 AI 研究助理 [CGU AIR Team]
+英文標題：CGUxAI AI Collaboration Tools for Faculty and Students｜LiteratureSurvey: An AI Research Assistant for Literature Search and Organization [CGU AIR Team]
+
+中文內文：======================
+
+「從一個研究問題開始，逐步找到值得深入閱讀的文獻」
+
+LiteratureSurvey 是專為研究生與學術研究者設計的文獻搜尋與整理工具，可免費使用，開啟網頁即可開始。
+https://educatres.github.io/LiteratureSurvey/
+
+還不確定該用哪些關鍵字？先從描述您的研究想法開始。
+
+LiteratureSurvey 讓您透過 AI 對話釐清研究對象、主題與搜尋範圍，協助擬定 PubMed 搜尋式，再依出版年份、文章類型與開放取用條件篩選文獻。將感興趣的文章加入「收藏的文獻清單」，就能請 AI 根據可用摘要整理研究主題、比較研究方法與主要發現，並透過持續追問，探索下一步的搜尋方向。
+
+LiteratureSurvey 整合 PubMed 文獻搜尋、摘要中文翻譯、AI 摘要、多篇文獻比較與批次匯出，讓找文獻、看摘要與整理線索，都能在同一個平台完成。您可以下載文獻摘要與文獻資訊 CSV，或批次取得可用的 PMC 開放取用全文 XML；每次最多 100 篇，並可透過原文連結進一步閱讀。
+
+不同研究主題可以分別建立專案，保存搜尋紀錄、收藏文獻與 AI 對話，並支援專案匯出與匯入備份。專案資料保存在您目前使用的瀏覽器中；使用 AI 時，相關對話與文獻摘要會傳送至您選擇的 AI 服務。讓每一次搜尋與討論都能接續累積，逐步整理出自己的文獻脈絡。
+
+本工具不限長庚師生使用；基本文獻搜尋與匯出不需要 AI 金鑰。若要使用 AI 功能，可連接 CGU、OpenAI、Grok（xAI）或 Google AI Studio，依所選服務與模型可能產生費用。請勿外流您的 CGU AI 金鑰。
+
+外校同學或校內 AI 額度用完的使用者，也可至 Google AI Studio 申請 API 金鑰，依其當時提供的免費額度與使用規範使用：https://aistudio.google.com/app/api-keys
+
+AI 整理與比較以可用摘要為依據，研究細節仍請核對原文；批次全文下載限可取得的 PMC 開放取用子集，格式為 XML。
+
+
+英文內文：======================
+
+“Start with a Research Question. Find the Papers Worth Reading.”
+
+LiteratureSurvey is a free-to-use, browser-based tool designed for graduate students and academic researchers to search and organize research literature.
+https://educatres.github.io/LiteratureSurvey/
+
+Not sure which keywords to use? Start by describing your research idea.
+
+Through AI conversations, LiteratureSurvey helps you clarify your research population, topic, and scope, then develop a PubMed search query. Filter results by publication year, article type, and open-access availability, and add relevant papers to your collection. AI can use the available abstracts to organize research themes, compare methods and key findings, and help you explore further search directions through follow-up questions.
+
+LiteratureSurvey brings together PubMed search, Chinese translations of abstracts, AI summaries, comparisons across papers, and batch export. Download abstract text files together with citation metadata in CSV format, or retrieve available full-text XML from the PMC Open Access Subset, with up to 100 papers per export. Links to the original sources help you continue reading in depth.
+
+Create separate projects for different research topics to save search history, collected papers, and AI conversations. Projects are stored in your current browser and can be exported and imported for backup. When you use AI, the relevant conversations and abstracts are sent to your selected AI service. Build on each search and discussion as you develop a clearer picture of the literature.
+
+Access and API Keys
+
+LiteratureSurvey is available to everyone, including users outside Chang Gung University (CGU). Basic literature search and export do not require an AI API key. AI features support CGU, OpenAI, Grok (xAI), and Google AI Studio; charges may apply depending on the service and model. Please do not share your CGU AI API key with anyone outside the university.
+
+Users from other institutions, as well as CGU users who have exhausted their AI quota, can obtain a Google AI Studio API key and use any free quota available under Google's current terms: https://aistudio.google.com/app/api-keys
+
+AI summaries and comparisons rely on available abstracts. Verify research details against the original papers. Batch full-text downloads are limited to retrievable articles in the PMC Open Access Subset and are provided as XML.
