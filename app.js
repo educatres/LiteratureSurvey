@@ -1156,9 +1156,24 @@ function renderNotebook() {
     const title = document.createElement('strong'); title.textContent = question.slice(0, 80) || 'AI 對話';
     const preview = document.createElement('span'); preview.textContent = assistant.content.replace(/\s+/g, ' ').slice(0, 140);
     entry.append(title, preview);
-    entry.addEventListener('click', () => { activeChatId = assistant.chatId || activeChatId; renderAiConversation(); $('notebook-menu').open = false; document.getElementById(`ai-message-${assistant.id}`)?.scrollIntoView?.({ behavior: 'smooth', block: 'center' }); });
+    entry.addEventListener('click', () => {
+      activeChatId = assistant.chatId || activeChatId;
+      renderAiConversation();
+      $('notebook-menu').open = false;
+      scrollToConversationMessage(assistant.id);
+    });
     list.append(entry);
   }
+}
+function scrollToConversationMessage(messageId) {
+  const container = $('ai-conversation');
+  const message = document.getElementById(`ai-message-${messageId}`);
+  const heading = message?.querySelector('.ai-message-heading');
+  if (!container || !heading) return;
+  const containerRect = container.getBoundingClientRect();
+  const headingRect = heading.getBoundingClientRect();
+  const top = container.scrollTop + headingRect.top - containerRect.top;
+  container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
 }
 function setAiBusy(busy) {
   for (const id of ['ai-analyze', 'ai-send', 'ai-new-conversation', 'ai-clear-conversation', 'ai-settings-toggle', 'ai-example-organize', 'ai-example-compare', 'ai-example-extend']) $(id).disabled = busy;
