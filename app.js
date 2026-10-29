@@ -713,6 +713,7 @@ function chatIds() {
 }
 function renderChatTabs() {
   const container = $('ai-chat-tabs'); container.replaceChildren();
+  const historyLabel = document.createElement('span'); historyLabel.className = 'ai-chat-tabs-label'; historyLabel.textContent = '對話歷程:'; container.append(historyLabel);
   for (const chatId of chatIds()) {
     const tab = document.createElement('button'); tab.type = 'button'; tab.className = 'ai-chat-tab'; tab.textContent = chatLabel(chatId);
     tab.setAttribute('role', 'tab'); tab.setAttribute('aria-selected', String(chatId === activeChatId)); tab.disabled = Boolean(aiAbort || chatId === activeChatId);
@@ -828,7 +829,7 @@ function renderAiConversation() {
   for (const message of messages) {
     const item = document.createElement('div'); item.className = `ai-message ${message.role === 'user' ? 'ai-user' : 'ai-assistant'}`;
     if (message.role === 'assistant') item.id = `ai-message-${message.id}`;
-    const label = document.createElement('strong'); label.textContent = message.role === 'user' ? '研究問題' : 'AI 研究助理';
+    const label = document.createElement('strong'); label.textContent = message.role === 'user' ? 'Query' : 'AI 研究助理';
     const body = document.createElement('div'); body.className = 'ai-message-body';
     const formatted = message.role === 'assistant' ? renderMarkdown(message.content) : null;
     if (formatted === null) body.textContent = message.content; else body.innerHTML = formatted;
@@ -1001,7 +1002,7 @@ $('ai-clear-conversation').addEventListener('click', () => {
   renderAiConversation(); aiMessage('已清除對話記錄。'); persistWorkspace();
 });
 $('ai-download').addEventListener('click', () => {
-  const report = aiConversation.filter(message => !isHiddenConversationQuestion(message)).map(message => `【${message.role === 'user' ? '研究問題' : 'AI 研究助理'}】\n${message.content}${message.searchQuery ? `\n\n【建議的 PubMed 搜尋式】\n${message.searchQuery}` : ''}`).join('\n\n');
+  const report = aiConversation.filter(message => !isHiddenConversationQuestion(message)).map(message => `【${message.role === 'user' ? 'Query' : 'AI 研究助理'}】\n${message.content}${message.searchQuery ? `\n\n【建議的 PubMed 搜尋式】\n${message.searchQuery}` : ''}`).join('\n\n');
   const url = URL.createObjectURL(new Blob([report], { type: 'text/plain;charset=utf-8' }));
   const link = document.createElement('a'); link.href = url; link.download = 'litfetch-ai-report.txt'; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
 });
