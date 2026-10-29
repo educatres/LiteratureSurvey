@@ -10,6 +10,12 @@ const EPMC = 'https://www.ebi.ac.uk/europepmc/webservices/rest';
 const MAX_ZIP_CONTENT = 120 * 1024 * 1024;
 const DEFAULT_ANALYSIS_QUESTION = '請根據目前提供的文獻摘要整理研究主題、主要發現與差異，標示 PMID，並提出能協助我縮小研究範圍的問題。';
 const $ = id => document.getElementById(id);
+const PAGE_SIZE_OPTIONS = new Set([20, 50, 100]);
+function getPageSize() {
+  const value = Number($('page-size')?.value);
+  return PAGE_SIZE_OPTIONS.has(value) ? value : PAGE_SIZE;
+}
+let previousPageSize = PAGE_SIZE;
 const state = {
   page: 0, total: 0, items: [], selected: new Map(), lastQuery: '',
   abstractCache: new Map(), abstractAssistCache: new Map(), searchAbort: null, exportAbort: null,
@@ -102,7 +108,7 @@ function textFromHtml(html) {
 
 async function europePmcSearch(query, signal, overrides = {}) {
   const params = new URLSearchParams({
-    query, format: 'json', resultType: 'core', pageSize: String(overrides.pageSize || PAGE_SIZE),
+    query, format: 'json', resultType: 'core', pageSize: String(overrides.pageSize || getPageSize()),
     cursorMark: overrides.cursorMark || '*'
   });
   const response = await fetch(`${EPMC}/search?${params}`, { signal, credentials: 'omit' });
@@ -175,7 +181,7 @@ async function performSearch(resetPage = true, externalSignal) {
     let source = 'ncbi';
     try {
       const apiSort = sort === 'pub date' ? 'pub date' : 'relevance';
-      response = await searchIds(query, state.page * PAGE_SIZE, PAGE_SIZE, apiSort, controller.signal);
+      response = await searchIds(query, state.page * getPageSize(), getPageSize(), apiSort, controller.signal);
       papers = await getSummaries(response.ids, controller.signal);
     } catch (primaryError) {
       if (controller.signal.aborted || primaryError.name === 'AbortError') throw primaryError;
@@ -199,7 +205,7 @@ async function performSearch(resetPage = true, externalSignal) {
     state.searchSource = source;
     for (const p of papers) if (typeof p.abstract === 'string') state.abstractCache.set(p.pmid, p.abstract);
     renderResults();
-    status(`顯示第 ${response.total ? state.page * PAGE_SIZE + 1 : 0}–${Math.min((state.page + 1) * PAGE_SIZE, response.total)} 篇；可跨頁挑選文獻。${source === 'europepmc' ? '目前使用 Europe PMC 備援搜尋（PubMed 收錄文獻）；進階 PubMed 語法可能有差異。' : ''}`);
+    status(`顯示第 ${response.total ? state.page * getPageSize() + 1 : 0}–${Math.min((state.page + 1) * getPageSize(), response.total)} 篇；可跨頁挑選文獻。${source === 'europepmc' ? '目前使用 Europe PMC 備援搜尋（PubMed 收錄文獻）；進階 PubMed 語法可能有差異。' : ''}`);
     return { papers: [...papers], total: response.total, query, source, baseQuery, filters, sort };
   } catch (error) {
     if (externalSignal && (error.name === 'AbortError' || controller.signal.aborted)) throw abortError();
@@ -234,18 +240,18 @@ function renderResults() {
       const tooltipHtml = content => renderMarkdown(content) ?? escapeHtml(content);
       const assistBadges = `${cachedAbstract ? `<span class="paper-ai-marker"><button type="button" class="paper-ai-badge paper-abstract-badge" data-preview="${p.pmid}" aria-label="查看已保存的摘要">摘要</button><span class="paper-ai-tooltip" role="tooltip"><strong>摘要</strong>${escapeHtml(cachedAbstract)}</span></span>` : ''}${assisted.translation ? `<span class="paper-ai-marker"><button type="button" class="paper-ai-badge paper-translation-badge" data-preview="${p.pmid}" aria-label="查看已保存的中文翻譯">譯</button><span class="paper-ai-tooltip" role="tooltip"><strong>中文翻譯</strong>${tooltipHtml(assisted.translation)}</span></span>` : ''}${assisted.summary ? `<span class="paper-ai-marker"><button type="button" class="paper-ai-badge paper-summary-badge" data-preview="${p.pmid}" aria-label="查看已保存的 AI 摘要">AI</button><span class="paper-ai-tooltip" role="tooltip"><strong>AI 摘要</strong>${tooltipHtml(assisted.summary)}</span></span>` : ''}`;
       return `<article class="paper-card${selected ? ' is-selected' : ''}">
-        <div class="paper-index"><span class="paper-number">${String(state.page * PAGE_SIZE + index + 1).padStart(3, '0')}</span><input type="checkbox" class="paper-checkbox" aria-label="選取 ${escapeHtml(p.title)}" data-pmid="${p.pmid}" ${selected ? 'checked' : ''}></div>
+        <div class="paper-index"><span class="paper-number">${String(state.page * getPageSize() + index + 1).padStart(3, '0')}</span><input type="checkbox" class="paper-checkbox" aria-label="選取 ${escapeHtml(p.title)}" data-pmid="${p.pmid}" ${selected ? 'checked' : ''}></div>
         <div class="paper-main"><div class="paper-top"><div class="paper-pills">${assistBadges}${p.pmcid ? '<span class="pill pmc">PMC 收錄</span>' : ''}${articleType ? `<span class="pill type">${escapeHtml(articleType)}</span>` : ''}</div></div>
         <h3 class="paper-title">${escapeHtml(p.title)}</h3><p class="paper-authors">${escapeHtml(authors || '未提供作者')}</p><div class="paper-publication"><span>${escapeHtml(p.journal)}</span><span>${escapeHtml(p.date || p.year)}</span><span>PMID ${p.pmid}</span></div>
         <div class="paper-footer"><button type="button" data-preview="${p.pmid}">查看摘要 ↗</button><a href="https://pubmed.ncbi.nlm.nih.gov/${p.pmid}/" target="_blank" rel="noopener noreferrer">PubMed ↗</a>${p.pmcid ? `<a href="https://pmc.ncbi.nlm.nih.gov/articles/${p.pmcid}/" target="_blank" rel="noopener noreferrer">PMC 全文頁 ↗</a>` : ''}${p.doi ? `<a class="doi" href="https://doi.org/${encodeURIComponent(p.doi)}" target="_blank" rel="noopener noreferrer">DOI ↗</a>` : ''}</div></div></article>`;
     }).join('');
   }
-  $('pagination').hidden = state.total <= PAGE_SIZE;
-  const totalPages = Math.ceil(state.total / PAGE_SIZE) || 1;
+  $('pagination').hidden = state.total <= getPageSize();
+  const totalPages = Math.ceil(state.total / getPageSize()) || 1;
   $('page-label').textContent = `第 ${state.page + 1} / ${totalPages} 頁`;
   const pageLinks = $('page-links');
   pageLinks.replaceChildren();
-  if (state.total > PAGE_SIZE) {
+  if (state.total > getPageSize()) {
     const start = Math.max(0, state.page - 5);
     const end = Math.min(totalPages - 1, state.page + 5);
     if (start > 0) appendPageLink(0);
@@ -255,7 +261,7 @@ function renderResults() {
     if (end < totalPages - 1) appendPageLink(totalPages - 1);
   }
   $('prev-page').disabled = state.page === 0;
-  $('next-page').disabled = (state.page + 1) * PAGE_SIZE >= state.total;
+  $('next-page').disabled = (state.page + 1) * getPageSize() >= state.total;
   $('select-page').disabled = state.items.length === 0 || state.isExporting;
   updateBasket();
 }
@@ -663,7 +669,27 @@ $('select-page').addEventListener('click', () => {
 });
 $('clear-selection').addEventListener('click', () => { state.selected.clear(); renderResults(); persistWorkspace(); });
 $('prev-page').addEventListener('click', () => { if (state.page > 0) changeResultPage(state.page - 1); });
-$('next-page').addEventListener('click', () => { if ((state.page + 1) * PAGE_SIZE < state.total) changeResultPage(state.page + 1); });
+$('next-page').addEventListener('click', () => { if ((state.page + 1) * getPageSize() < state.total) changeResultPage(state.page + 1); });
+$('page-size').addEventListener('change', event => {
+  const next = getPageSize();
+
+  if (next === 100 && previousPageSize !== 100 &&
+      !window.confirm('每頁顯示 100 篇時，後續 AI 分析或下載摘要會逐一抓取摘要，等待時間可能較長。確定要使用 100 篇嗎？')) {
+    event.target.value = String(previousPageSize);
+    return;
+  }
+
+  if (aiAbort || state.isSearching || state.isExporting) {
+    event.target.value = String(previousPageSize);
+    status('請先等目前的搜尋、分析或下載完成，再調整每頁顯示數量。', true);
+    return;
+  }
+
+  previousPageSize = next;
+  scheduleWorkspaceSave();
+  if ($('query').value.trim()) manualSearch();
+  else renderResults();
+});
 $('download-abstracts').addEventListener('click', () => startExport('abstracts'));
 $('download-fulltext').addEventListener('click', () => startExport('fulltext'));
 $('cancel-download').addEventListener('click', () => state.exportAbort?.abort());
@@ -690,7 +716,7 @@ let abstractAiAbort = null;
 let abstractView = { pmid: '', text: '', translation: '', summary: '' };
 
 const LEGACY_WORKSPACE_STORAGE = 'literaturesurvey.workspace.v1';
-const WORKSPACE_FIELDS = ['query', 'year-from', 'year-to', 'article-type', 'sort-by', 'open-access', 'results-keyword', 'contact-email', 'ai-question', 'ai-use-collection'];
+const WORKSPACE_FIELDS = ['query', 'year-from', 'year-to', 'article-type', 'sort-by', 'page-size', 'open-access', 'results-keyword', 'contact-email', 'ai-question', 'ai-use-collection'];
 const CHECKBOX_WORKSPACE_FIELDS = new Set(['open-access', 'ai-use-collection']);
 let projectIndex = { version: 1, activeProjectId: null, projects: [] };
 let activeProjectId = null;
@@ -825,8 +851,9 @@ function resetWorkspaceRuntime() {
   state.epmcCursors = new Map([[0, '*']]); abstractView = { pmid: '', text: '', translation: '', summary: '' }; storageBlocked = false;
   for (const id of WORKSPACE_FIELDS) {
     if (CHECKBOX_WORKSPACE_FIELDS.has(id)) $(id).checked = id === 'ai-use-collection';
-    else $(id).value = id === 'sort-by' ? 'relevance' : '';
+    else $(id).value = id === 'sort-by' ? 'relevance' : id === 'page-size' ? String(PAGE_SIZE) : '';
   }
+  previousPageSize = getPageSize();
 }
 
 function loadProjectIndex() {
@@ -927,6 +954,7 @@ function openProject(projectId) {
       else if (typeof saved.fields[id] === 'string') $(id).value = saved.fields[id];
     }
   }
+  previousPageSize = getPageSize();
   restoreRound(activeRound()); renderRoundTabs(); renderAiConversation(); updateAiScope();
   project.updatedAt = new Date().toISOString(); persistProjectIndex();
   $('current-project-name').textContent = project.name; showApp();
@@ -970,8 +998,9 @@ function clearWorkspace() {
   state.searchSource = 'ncbi';
   for (const id of WORKSPACE_FIELDS) {
     if (CHECKBOX_WORKSPACE_FIELDS.has(id)) $(id).checked = id === 'ai-use-collection';
-    else $(id).value = id === 'sort-by' ? 'relevance' : '';
+    else $(id).value = id === 'sort-by' ? 'relevance' : id === 'page-size' ? String(PAGE_SIZE) : '';
   }
+  previousPageSize = getPageSize();
   if ($('abstract-dialog').open) $('abstract-dialog').close();
   restoreRound(activeRound()); renderRoundTabs(); renderAiConversation(); aiMessage('');
   storageNotice('已清除搜尋紀錄與對話；收藏的文獻清單及 AI 金鑰設定保留。');
@@ -996,12 +1025,13 @@ function activeRound() { return rounds.find(round => round.id === activeRoundId)
 function saveRoundResults(round, result) {
   const pages = { ...(round.snapshot?.pages || {}), [state.page]: { items: [...state.items], total: state.total, source: state.searchSource } };
   round.snapshot = { baseQuery: result.baseQuery, filters: { ...result.filters }, sort: result.sort,
-    query: result.query, page: state.page, total: state.total, items: [...state.items],
+    query: result.query, page: state.page, pageSize: getPageSize(), total: state.total, items: [...state.items],
     source: state.searchSource, cursors: new Map(state.epmcCursors), pages };
 }
 function restoreRound(round) {
   const snapshot = round.snapshot;
   if (snapshot) {
+    if (PAGE_SIZE_OPTIONS.has(Number(snapshot.pageSize))) $('page-size').value = String(snapshot.pageSize);
     $('query').value = snapshot.baseQuery;
     $('year-from').value = snapshot.filters.from; $('year-to').value = snapshot.filters.to;
     $('article-type').value = snapshot.filters.articleType; $('open-access').checked = snapshot.filters.openAccess;
@@ -1010,7 +1040,8 @@ function restoreRound(round) {
     state.page = snapshot.page; state.total = snapshot.total; state.items = [...snapshot.items];
     state.lastQuery = snapshot.query; state.searchSource = snapshot.source; state.epmcCursors = new Map(snapshot.cursors);
     renderResults();
-    status(`${round.label}：顯示第 ${snapshot.total ? snapshot.page * PAGE_SIZE + 1 : 0}–${Math.min((snapshot.page + 1) * PAGE_SIZE, snapshot.total)} 篇。${snapshot.source === 'europepmc' ? '目前使用 Europe PMC 備援搜尋。' : ''}`);
+    previousPageSize = getPageSize();
+    status(`${round.label}：顯示第 ${snapshot.total ? snapshot.page * getPageSize() + 1 : 0}–${Math.min((snapshot.page + 1) * getPageSize(), snapshot.total)} 篇。${snapshot.source === 'europepmc' ? '目前使用 Europe PMC 備援搜尋。' : ''}`);
   } else {
     $('query').value = '';
     state.page = 0; state.total = 0; state.items = []; state.lastQuery = '';
