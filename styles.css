@@ -241,7 +241,7 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
 
 /* Keep per-reply actions beside the assistant label. */
 .ai-message-heading{display:flex;align-items:center;gap:6px;min-height:25px;margin-bottom:5px}
-.ai-message-heading>strong{display:block;margin:0;color:#327151;font-size:11px}
+.ai-message-heading>strong{display:block;margin:0;color:#327151;font-size:11px}.ai-message-sequence{display:block;min-width:1.2em;color:#8ba092;font-size:10px;font-weight:750}
 .ai-assistant{padding-right:0!important}
 .ai-message-heading .conversation-save-button,.ai-message-heading .conversation-continue-button{position:static;flex:none;width:23px;height:23px;font-size:15px}
 .abstract-ai-content.has-markdown{white-space:normal}

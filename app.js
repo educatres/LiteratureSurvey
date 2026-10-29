@@ -1112,11 +1112,17 @@ function renderAiConversation() {
   if (!messages.length) {
     const empty = document.createElement('p'); empty.className = 'ai-empty'; empty.textContent = '選取文獻後開始整理，也可以直接輸入研究問題。'; container.append(empty);
   }
+  let assistantSequence = 0;
   for (const message of messages) {
     const item = document.createElement('div'); item.className = `ai-message ${message.role === 'user' ? 'ai-user' : 'ai-assistant'}`;
     if (message.role === 'assistant') item.id = `ai-message-${message.id}`;
     const heading = document.createElement('div'); heading.className = 'ai-message-heading';
     const label = document.createElement('strong'); label.textContent = message.role === 'user' ? 'Query' : 'AI 研究助理';
+    if (message.role === 'assistant') {
+      assistantSequence++;
+      const sequence = document.createElement('span'); sequence.className = 'ai-message-sequence'; sequence.textContent = `${assistantSequence}.`; sequence.setAttribute('aria-hidden', 'true');
+      heading.append(sequence);
+    }
     const body = document.createElement('div'); body.className = 'ai-message-body';
     const formatted = message.role === 'assistant' ? renderMarkdown(message.content) : null;
     if (formatted === null) body.textContent = message.content; else body.innerHTML = formatted;
