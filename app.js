@@ -470,6 +470,18 @@ $('reset-filters').addEventListener('click', () => {
   if ($('query').value.trim()) manualSearch();
   else persistWorkspace();
 });
+$('toggle-filters').addEventListener('click', () => {
+  const panel = $('filters-popover');
+  const open = panel.classList.toggle('is-open');
+  $('toggle-filters').setAttribute('aria-expanded', String(open));
+  if (open && window.innerWidth > 700) {
+    const host = document.querySelector('.work-area');
+    const hostRect = host.getBoundingClientRect();
+    const buttonRect = $('toggle-filters').getBoundingClientRect();
+    panel.style.left = `${Math.max(8, Math.min(buttonRect.right - hostRect.left - panel.offsetWidth, host.clientWidth - panel.offsetWidth - 8))}px`;
+    panel.style.top = `${buttonRect.bottom - hostRect.top + 8}px`;
+  } else if (window.innerWidth <= 700) { panel.style.left = ''; panel.style.top = ''; }
+});
 const topbarMenus = [...document.querySelectorAll('.topbar-right details')];
 for (const menu of topbarMenus) menu.addEventListener('toggle', () => {
   menu.querySelector('summary')?.setAttribute('aria-expanded', String(menu.open));

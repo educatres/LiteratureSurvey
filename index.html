@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#f7f8f5">
   <meta name="description" content="搜尋 PubMed、篩選與挑選文獻，批次下載摘要及可合法取得的開放取用全文。">
   <title>LiteratureSurvey — PubMed 文獻批次下載工作台</title>
-  <link rel="stylesheet" href="./styles.css?v=20261029-18">
-  <script type="module" src="./app.js?v=20261029-18"></script>
+  <link rel="stylesheet" href="./styles.css?v=20261029-19">
+  <script type="module" src="./app.js?v=20261029-19"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -32,7 +32,7 @@
 
       <div class="work-area">
         <div class="rounds-bar"><div class="storage-heading"><span class="section-overline">搜尋與對話紀錄</span></div><div id="results-round-tabs" class="round-tabs" aria-label="對話與搜尋紀錄"></div><p id="storage-status" class="storage-status" role="status" aria-live="polite" hidden></p></div>
-        <aside class="filter-panel" aria-labelledby="filters-title">
+        <aside class="filter-panel" id="filters-popover" aria-labelledby="filters-title">
           <div class="panel-header"><div><h2 id="filters-title">縮小搜尋範圍</h2></div><div class="panel-actions"><button id="reset-filters" class="text-button" type="button">重設</button></div></div>
           <div id="filters-content" class="filters-content">
           <div class="field-group"><label class="field-label" for="year-from">出版年份</label><div class="year-range"><input id="year-from" type="number" min="1800" max="2100" placeholder="起始年份" inputmode="numeric"><span>—</span><input id="year-to" type="number" min="1800" max="2100" placeholder="結束年份" inputmode="numeric"></div></div>
@@ -44,7 +44,7 @@
         </aside>
 
         <section class="results-panel" aria-labelledby="results-title">
-          <div class="results-topline"><div><h2 id="results-title">搜尋結果 <span class="result-count" id="result-count"></span></h2></div><div class="results-actions"><button type="button" id="select-page" class="subtle-button" disabled>全選此頁</button><button type="button" id="clear-selection" class="subtle-button" disabled>清空選取</button></div></div>
+          <div class="results-topline"><div><h2 id="results-title">搜尋結果 <span class="result-count" id="result-count"></span></h2></div><div class="results-actions"><button type="button" id="toggle-filters" class="subtle-button filter-menu-trigger" aria-expanded="false" aria-controls="filters-popover">縮小搜尋範圍</button><button type="button" id="select-page" class="subtle-button" disabled>全選此頁</button><button type="button" id="clear-selection" class="subtle-button" disabled>清空選取</button></div></div>
           <div id="results-notice" class="results-notice" role="status" aria-live="polite">輸入搜尋條件後，即可查看 PubMed 文獻。</div>
           <div id="results-list" class="results-list" aria-live="polite"><div class="empty-state"><div class="empty-art" aria-hidden="true"><svg viewBox="0 0 120 110"><rect x="27" y="14" width="67" height="82" rx="8"/><path d="M42 35h36M42 47h36M42 59h22M42 71h28"/><circle cx="86" cy="76" r="20"/><path d="m100 90 13 13"/></svg></div><h3>從好問題開始</h3><p>輸入你的研究主題，這裡將顯示可篩選與挑選的文獻清單。</p></div></div>
           <div class="pagination" id="pagination" hidden><button type="button" id="prev-page" class="page-button">← 上一頁</button><span id="page-label"></span><button type="button" id="next-page" class="page-button">下一頁 →</button></div>
