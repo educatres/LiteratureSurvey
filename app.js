@@ -528,8 +528,10 @@ let storageBlocked = false;
 let saveTimer = null;
 
 function storageNotice(message, error = false) {
-  $('storage-status').textContent = message;
-  $('storage-status').classList.toggle('error', error);
+  const notice = $('storage-status');
+  notice.hidden = !error;
+  notice.textContent = error ? message : '';
+  notice.classList.toggle('error', error);
 }
 function persistWorkspace() {
   clearTimeout(saveTimer); saveTimer = null;
@@ -538,7 +540,7 @@ function persistWorkspace() {
     const fields = Object.fromEntries(WORKSPACE_FIELDS.map(id => [id, id === 'open-access' ? $(id).checked : $(id).value]));
     localStorage.setItem(WORKSPACE_STORAGE, encodeWorkspace({ rounds, activeRoundId, nextRoundId,
       selected: state.selected, abstracts: state.abstractCache, conversation: aiConversation, fields }));
-    storageNotice('搜尋紀錄會自動保存在此瀏覽器。');
+    storageNotice('');
   } catch {
     storageNotice('無法儲存搜尋紀錄，瀏覽器空間可能已滿或儲存功能遭封鎖；重新整理可能遺失最新變更。', true);
   }

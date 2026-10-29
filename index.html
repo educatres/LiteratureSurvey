@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#f7f8f5">
   <meta name="description" content="搜尋 PubMed、篩選與挑選文獻，批次下載摘要及可合法取得的開放取用全文。">
   <title>LiteratureSurvey — PubMed 文獻批次下載工作台</title>
-  <link rel="stylesheet" href="./styles.css?v=20261029-14">
-  <script type="module" src="./app.js?v=20261029-14"></script>
+  <link rel="stylesheet" href="./styles.css?v=20261029-15">
+  <script type="module" src="./app.js?v=20261029-15"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -25,13 +25,13 @@
           <label for="query" class="sr-only">PubMed 搜尋關鍵字或查詢語法</label>
           <span class="search-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.7"/><path d="m16 16 5 5"/></svg></span>
           <input id="query" name="query" placeholder="輸入關鍵字、作者、疾病，或 PubMed Boolean query…" autocomplete="off" required>
+          <div class="search-examples search-examples-inline"><button type="button" class="example-query" data-query="CRISPR AND gene therapy">CRISPR + gene therapy ↗</button><button type="button" class="example-query" data-query="(type 2 diabetes) AND exercise">Diabetes + exercise ↗</button><button type="button" class="example-query" data-query="AI AND radiology">AI + radiology ↗</button></div>
           <button type="submit" id="search-button" class="primary-button"><span>搜尋文獻</span><span class="button-arrow" aria-hidden="true">↗</span></button>
         </form>
-        <div class="search-examples"><span>試試搜尋</span><button type="button" class="example-query" data-query="CRISPR AND gene therapy">CRISPR + gene therapy ↗</button><button type="button" class="example-query" data-query="(type 2 diabetes) AND exercise">Diabetes + exercise ↗</button><button type="button" class="example-query" data-query="AI AND radiology">AI + radiology ↗</button></div>
       </section>
 
       <div class="work-area">
-        <div class="rounds-bar"><div class="storage-heading"><span class="section-overline">搜尋與對話紀錄</span><button type="button" id="clear-workspace" class="subtle-button">清除所有搜尋紀錄</button></div><div id="results-round-tabs" class="round-tabs" aria-label="對話與搜尋紀錄"></div><p id="storage-status" class="storage-status" role="status" aria-live="polite">搜尋紀錄會自動保存在此瀏覽器。</p></div>
+        <div class="rounds-bar"><div class="storage-heading"><span class="section-overline">搜尋與對話紀錄</span><button type="button" id="clear-workspace" class="subtle-button">清除所有搜尋紀錄</button></div><div id="results-round-tabs" class="round-tabs" aria-label="對話與搜尋紀錄"></div><p id="storage-status" class="storage-status" role="status" aria-live="polite" hidden></p></div>
         <aside class="filter-panel" aria-labelledby="filters-title">
           <div class="panel-header"><div><span class="section-overline">01 / REFINE</span><h2 id="filters-title">縮小搜尋範圍</h2></div><div class="panel-actions"><button id="reset-filters" class="text-button" type="button">重設</button><button id="toggle-filters" class="collapse-button" type="button" aria-expanded="true" aria-controls="filters-content" aria-label="收折搜尋範圍">⌃</button></div></div>
           <div id="filters-content" class="filters-content">
@@ -40,7 +40,6 @@
           <div class="field-group"><label class="field-label" for="sort-by">排序方式</label><select id="sort-by"><option value="relevance">相關性最高</option><option value="pub date">最新出版</option></select></div>
           <label class="checkbox-row"><input id="open-access" type="checkbox"><span><strong>限 PMC 開放取用全文</strong><small>僅搜尋 PMC Open Access Subset，較適合批次取得全文</small></span></label>
           <button type="button" class="filter-apply" id="apply-filters">套用篩選 <span aria-hidden="true">→</span></button>
-          <div class="info-card"><span class="info-icon">ⓘ</span><p>搜尋與匯出不需要 AI API Key；使用 AI 分析時需提供自己的金鑰。付費牆論文不會繞過授權下載。</p></div>
           </div>
         </aside>
 
