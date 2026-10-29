@@ -1,6 +1,6 @@
 import { makeZip } from './zip.mjs';
 import { renderMarkdown } from './markdown.mjs';
-import { encodeWorkspace, decodeWorkspace } from './workspace.mjs';
+import { encodeWorkspace, decodeWorkspace, encodeProjectIndex, decodeProjectIndex } from './workspace.mjs';
 import { PAGE_SIZE, MAX_EXPORT, buildPubmedQuery, sortPapers, normalizeSummary, metadataCsv, fileStem, chunks } from './domain.mjs';
 import { PROVIDERS, listModels, generateText, buildAnalysisPrompt, extractSearchSuggestion } from './ai.mjs?v=20261029-4';
 
@@ -682,11 +682,214 @@ let chatSequence = 1;
 let abstractAiAbort = null;
 let abstractView = { pmid: '', text: '', translation: '', summary: '' };
 
-const WORKSPACE_STORAGE = 'literaturesurvey.workspace.v1';
+const LEGACY_WORKSPACE_STORAGE = 'literaturesurvey.workspace.v1';
+const PROJECT_INDEX_STORAGE = 'literaturesurvey.projects.v1';
+const PROJECT_WORKSPACE_PREFIX = 'literaturesurvey.project.';
 const WORKSPACE_FIELDS = ['query', 'year-from', 'year-to', 'article-type', 'sort-by', 'open-access', 'results-keyword', 'contact-email', 'ai-question'];
+let projectIndex = { version: 1, activeProjectId: null, projects: [] };
+let activeProjectId = null;
 let workspaceGeneration = 0;
 let storageBlocked = false;
 let saveTimer = null;
+
+function projectWorkspaceStorage(projectId = activeProjectId) {
+  if (!projectId) return null;
+  return `${PROJECT_WORKSPACE_PREFIX}${encodeURIComponent(projectId)}`;
+}
+
+function newProjectId() {
+  const suffix = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `project-${suffix.replace(/[^A-Za-z0-9_-]/g, '')}`;
+}
+
+function projectById(projectId) { return projectIndex.projects.find(project => project.id === projectId); }
+
+function projectStorageNotice(message, error = false) {
+  const notice = $('project-gate-status');
+  if (!notice) return;
+  notice.hidden = !message;
+  notice.textContent = message;
+  notice.classList.toggle('error', error);
+}
+
+function persistProjectIndex() {
+  try {
+    localStorage.setItem(PROJECT_INDEX_STORAGE, encodeProjectIndex(projectIndex));
+    projectStorageNotice('');
+    return true;
+  } catch {
+    projectStorageNotice('無法儲存專案清單，瀏覽器空間可能已滿或儲存功能遭封鎖。', true);
+    return false;
+  }
+}
+
+function projectDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('zh-Hant', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function renderProjectList() {
+  const list = $('project-list');
+  if (!list) return;
+  list.replaceChildren();
+  const projects = [...projectIndex.projects].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  $('project-empty').hidden = projects.length > 0;
+  for (const project of projects) {
+    const item = document.createElement('article'); item.className = 'project-card';
+    const open = document.createElement('button'); open.type = 'button'; open.className = 'project-card-open';
+    const title = document.createElement('strong'); title.textContent = project.name;
+    const meta = document.createElement('span'); meta.textContent = `最後使用：${projectDate(project.updatedAt) || '尚無紀錄'}`;
+    open.append(title, meta); open.addEventListener('click', () => openProject(project.id));
+    const actions = document.createElement('div'); actions.className = 'project-card-actions';
+    const rename = document.createElement('button'); rename.type = 'button'; rename.className = 'text-button'; rename.textContent = '重新命名';
+    rename.addEventListener('click', () => renameProject(project.id));
+    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'text-button danger-button'; remove.textContent = '刪除';
+    remove.addEventListener('click', () => deleteProject(project.id));
+    actions.append(rename, remove); item.append(open, actions); list.append(item);
+  }
+}
+
+function showProjectGate(message = '') {
+  if (state.isSearching || state.isExporting || aiAbort) {
+    const notice = '請先等目前的搜尋、分析或下載完成，或取消作業。';
+    if (activeProjectId) storageNotice(notice, true); else projectStorageNotice(notice, true);
+    return;
+  }
+  const hadActiveProject = Boolean(activeProjectId);
+  if (hadActiveProject) persistWorkspace();
+  activeProjectId = null;
+  projectIndex.activeProjectId = null;
+  if (hadActiveProject) persistProjectIndex();
+  $('project-gate').hidden = false;
+  $('topbar-right').hidden = true;
+  $('app-main').hidden = true;
+  $('app-footer').hidden = true;
+  renderProjectList();
+  if (message) projectStorageNotice(message);
+}
+
+function showApp() {
+  $('project-gate').hidden = true;
+  $('topbar-right').hidden = false;
+  $('app-main').hidden = false;
+  $('app-footer').hidden = false;
+}
+
+function resetWorkspaceRuntime() {
+  clearTimeout(saveTimer); saveTimer = null; workspaceGeneration++;
+  rounds.splice(0, rounds.length, { id: 0, label: '初始對話', parent: null, snapshot: null });
+  activeRoundId = 0; nextRoundId = 1; aiConversation = []; conversationSequence = 0; activeChatId = 'chat-1'; chatSequence = 1;
+  state.page = 0; state.total = 0; state.items = []; state.selected = new Map(); state.lastQuery = '';
+  state.abstractCache = new Map(); state.abstractAssistCache = new Map(); state.searchSource = 'ncbi';
+  state.epmcCursors = new Map([[0, '*']]); abstractView = { pmid: '', text: '', translation: '', summary: '' }; storageBlocked = false;
+  for (const id of WORKSPACE_FIELDS) {
+    if (id === 'open-access') $(id).checked = false;
+    else $(id).value = id === 'sort-by' ? 'relevance' : '';
+  }
+}
+
+function loadProjectIndex() {
+  try {
+    const raw = localStorage.getItem(PROJECT_INDEX_STORAGE);
+    if (raw) { projectIndex = decodeProjectIndex(raw); return; }
+    const legacy = localStorage.getItem(LEGACY_WORKSPACE_STORAGE);
+    if (legacy) {
+      decodeWorkspace(legacy);
+      const now = new Date().toISOString();
+      const migrated = { id: 'project-migrated', name: '我的第一個專案', createdAt: now, updatedAt: now };
+      localStorage.setItem(projectWorkspaceStorage(migrated.id), legacy);
+      projectIndex = { version: 1, activeProjectId: migrated.id, projects: [migrated] };
+      localStorage.setItem(PROJECT_INDEX_STORAGE, encodeProjectIndex(projectIndex));
+      localStorage.removeItem(LEGACY_WORKSPACE_STORAGE);
+      return;
+    }
+    projectIndex = { version: 1, activeProjectId: null, projects: [] };
+  } catch {
+    projectIndex = { version: 1, activeProjectId: null, projects: [] };
+    projectStorageNotice('無法讀取專案清單；請檢查瀏覽器儲存設定。', true);
+  }
+}
+
+function createProject(name) {
+  const trimmed = name.trim();
+  if (!trimmed) { projectStorageNotice('專案名稱不能留白。', true); return null; }
+  if (trimmed.length > 80) { projectStorageNotice('專案名稱最多 80 個字元。', true); return null; }
+  if (projectIndex.projects.some(project => project.name.toLocaleLowerCase() === trimmed.toLocaleLowerCase())) {
+    projectStorageNotice('已有同名專案，請使用其他名稱。', true); return null;
+  }
+  const now = new Date().toISOString();
+  const project = { id: newProjectId(), name: trimmed, createdAt: now, updatedAt: now };
+  try {
+    localStorage.setItem(projectWorkspaceStorage(project.id), encodeWorkspace({
+      rounds: [{ id: 0, label: '初始對話', parent: null, snapshot: null }], activeRoundId: 0, nextRoundId: 1,
+      selected: new Map(), abstracts: new Map(), abstractAssists: new Map(), conversation: [], fields: {}
+    }));
+  } catch {
+    projectStorageNotice('無法建立專案，瀏覽器空間可能已滿或儲存功能遭封鎖。', true); return null;
+  }
+  projectIndex.projects.push(project); projectIndex.activeProjectId = project.id;
+  if (!persistProjectIndex()) {
+    projectIndex.projects = projectIndex.projects.filter(item => item.id !== project.id);
+    projectIndex.activeProjectId = null;
+    try { localStorage.removeItem(projectWorkspaceStorage(project.id)); } catch { /* Keep the original storage error visible. */ }
+    return null;
+  }
+  return project;
+}
+
+function renameProject(projectId) {
+  const project = projectById(projectId); if (!project) return;
+  const next = window.prompt('請輸入專案名稱：', project.name);
+  if (next === null) return;
+  const trimmed = next.trim();
+  if (!trimmed || trimmed.length > 80) { projectStorageNotice('專案名稱必須是 1–80 個字元。', true); return; }
+  if (projectIndex.projects.some(item => item.id !== projectId && item.name.toLocaleLowerCase() === trimmed.toLocaleLowerCase())) {
+    projectStorageNotice('已有同名專案，請使用其他名稱。', true); return;
+  }
+  project.name = trimmed; project.updatedAt = new Date().toISOString();
+  persistProjectIndex(); renderProjectList();
+  if (activeProjectId === projectId) $('current-project-name').textContent = project.name;
+}
+
+function deleteProject(projectId) {
+  const project = projectById(projectId); if (!project) return;
+  if (!window.confirm(`確定要刪除「${project.name}」及其中所有資料嗎？`)) return;
+  try { localStorage.removeItem(projectWorkspaceStorage(projectId)); }
+  catch { projectStorageNotice('無法刪除專案資料，請檢查瀏覽器儲存設定。', true); return; }
+  projectIndex.projects = projectIndex.projects.filter(item => item.id !== projectId);
+  if (projectIndex.activeProjectId === projectId) projectIndex.activeProjectId = null;
+  persistProjectIndex(); renderProjectList();
+}
+
+function openProject(projectId) {
+  const project = projectById(projectId); if (!project) return;
+  if (state.isSearching || state.isExporting || aiAbort) { projectStorageNotice('請先等目前的搜尋、分析或下載完成，或取消作業。', true); return; }
+  const key = projectWorkspaceStorage(projectId);
+  let saved = null;
+  try {
+    const raw = localStorage.getItem(key);
+    saved = raw ? decodeWorkspace(raw) : null;
+  } catch {
+    projectStorageNotice('無法讀取此專案資料；為避免覆蓋原始資料，請先檢查儲存內容。', true); return;
+  }
+  resetWorkspaceRuntime(); activeProjectId = projectId; projectIndex.activeProjectId = projectId;
+  if (saved) {
+    rounds.splice(0, rounds.length, ...saved.rounds); activeRoundId = saved.activeRoundId; nextRoundId = saved.nextRoundId;
+    state.selected = saved.selected; state.abstractCache = saved.abstracts; state.abstractAssistCache = saved.abstractAssists;
+    aiConversation = saved.conversation; activeChatId = saved.activeChatId || 'chat-1'; chatSequence = saved.chatSequence || 1;
+    for (const message of aiConversation) message.chatId ||= 'chat-1';
+    const chatIds = new Set(['chat-1', ...aiConversation.map(message => message.chatId).filter(Boolean)]);
+    if (!chatIds.has(activeChatId)) activeChatId = 'chat-1';
+    chatSequence = Math.max(chatSequence, ...[...chatIds].map(id => Number(String(id).replace('chat-', '')) || 1));
+    for (const id of WORKSPACE_FIELDS) {
+      if (id === 'open-access') $(id).checked = Boolean(saved.fields[id]);
+      else if (typeof saved.fields[id] === 'string') $(id).value = saved.fields[id];
+    }
+  }
+  restoreRound(activeRound()); renderRoundTabs(); renderAiConversation(); updateAiScope();
+  project.updatedAt = new Date().toISOString(); persistProjectIndex();
+  $('current-project-name').textContent = project.name; showApp();
+}
 
 function storageNotice(message, error = false) {
   const notice = $('storage-status');
@@ -696,11 +899,13 @@ function storageNotice(message, error = false) {
 }
 function persistWorkspace() {
   clearTimeout(saveTimer); saveTimer = null;
-  if (storageBlocked) return;
+  if (storageBlocked || !activeProjectId) return;
   try {
     const fields = Object.fromEntries(WORKSPACE_FIELDS.map(id => [id, id === 'open-access' ? $(id).checked : $(id).value]));
-    localStorage.setItem(WORKSPACE_STORAGE, encodeWorkspace({ rounds, activeRoundId, nextRoundId,
+    localStorage.setItem(projectWorkspaceStorage(), encodeWorkspace({ rounds, activeRoundId, nextRoundId,
       selected: state.selected, abstracts: state.abstractCache, abstractAssists: state.abstractAssistCache, conversation: aiConversation, fields, activeChatId, chatSequence }));
+    const project = projectById(activeProjectId);
+    if (project) { project.updatedAt = new Date().toISOString(); persistProjectIndex(); }
     storageNotice('');
   } catch {
     storageNotice('無法儲存搜尋紀錄，瀏覽器空間可能已滿或儲存功能遭封鎖；重新整理可能遺失最新變更。', true);
@@ -710,41 +915,14 @@ function scheduleWorkspaceSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(persistWorkspace, 250);
 }
-function loadWorkspace() {
-  try {
-    const raw = localStorage.getItem(WORKSPACE_STORAGE);
-    if (!raw) return false;
-    const saved = decodeWorkspace(raw);
-    rounds.splice(0, rounds.length, ...saved.rounds);
-    activeRoundId = saved.activeRoundId; nextRoundId = saved.nextRoundId;
-    state.selected = saved.selected; state.abstractCache = saved.abstracts; state.abstractAssistCache = saved.abstractAssists;
-    aiConversation = saved.conversation;
-    activeChatId = saved.activeChatId || 'chat-1'; chatSequence = saved.chatSequence || 1;
-    for (const message of aiConversation) message.chatId ||= 'chat-1';
-    const availableChatIds = new Set(['chat-1', ...aiConversation.map(message => message.chatId).filter(Boolean)]);
-    if (!availableChatIds.has(activeChatId)) activeChatId = 'chat-1';
-    chatSequence = Math.max(chatSequence, ...[...availableChatIds].map(id => Number(String(id).replace('chat-', '')) || 1));
-    restoreRound(activeRound());
-    for (const id of WORKSPACE_FIELDS) {
-      if (id === 'open-access') $(id).checked = Boolean(saved.fields[id]);
-      else if (typeof saved.fields[id] === 'string') $(id).value = saved.fields[id];
-    }
-    storageNotice('已恢復此瀏覽器的搜尋紀錄。');
-    return true;
-  } catch {
-    storageBlocked = true;
-    storageNotice('無法讀取已儲存的搜尋紀錄；為保留原始資料，暫停自動儲存。可使用清除按鈕重新開始。', true);
-    return false;
-  }
-}
 function clearWorkspace() {
   if (aiAbort || state.isSearching || state.isExporting) {
     storageNotice('請先等搜尋、分析或下載完成，或取消進行中的作業。', true); return;
   }
   if (!window.confirm('清除這個瀏覽器的所有搜尋結果、摘要及 AI 對話嗎？「收藏的文獻清單」中的文獻不會刪除。')) return;
-  try { localStorage.removeItem(WORKSPACE_STORAGE); }
+  try { localStorage.removeItem(projectWorkspaceStorage()); }
   catch { storageNotice('無法清除瀏覽器儲存的搜尋紀錄，請檢查瀏覽器設定。', true); return; }
-  clearTimeout(saveTimer); saveTimer = null; workspaceGeneration++; storageBlocked = false;
+  resetWorkspaceRuntime();
   rounds.splice(0, rounds.length, { id: 0, label: '初始對話', parent: null, snapshot: null });
   activeRoundId = 0; nextRoundId = 1; aiConversation = []; activeChatId = 'chat-1'; chatSequence = 1;
   state.abstractCache = new Map(); state.abstractAssistCache = new Map();
@@ -1058,10 +1236,17 @@ async function searchAndAnalyze(suggestion) {
 
 $('ai-provider').value = aiSettings.provider;
 loadAiProvider();
-loadWorkspace();
-updateAiScope();
-renderRoundTabs();
-renderAiConversation();
+$('project-create-form').addEventListener('submit', event => {
+  event.preventDefault();
+  const project = createProject($('project-name').value);
+  if (!project) return;
+  $('project-name').value = '';
+  openProject(project.id);
+});
+$('project-switch').addEventListener('click', () => showProjectGate());
+loadProjectIndex();
+renderProjectList();
+showProjectGate();
 for (const id of WORKSPACE_FIELDS) {
   $(id).addEventListener('input', scheduleWorkspaceSave);
   $(id).addEventListener('change', scheduleWorkspaceSave);

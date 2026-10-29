@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { encodeWorkspace, decodeWorkspace } from '../workspace.mjs';
+import { encodeWorkspace, decodeWorkspace, encodeProjectIndex, decodeProjectIndex } from '../workspace.mjs';
 
 test('workspace restores result pages, cursors, selections, abstracts, conversation and draft', () => {
   const paper = { pmid: '123', pmcid: 'PMC123', doi: '', title: 'Study', journal: 'Journal', date: '', year: '2025', authors: [], type: [] };
@@ -27,4 +27,14 @@ test('corrupt or unsafe stored data is rejected instead of partially restored', 
     activeRoundId: 0, nextRoundId: 1, selected: [['123', { pmid: '123" onclick="alert(1)' }]], abstracts: [], conversation: [], fields: {} })));
   assert.throws(() => decodeWorkspace(JSON.stringify({ version: 1, rounds: [{ id: 0, label: 'x', parent: null, snapshot: null }],
     activeRoundId: 0, nextRoundId: 1, selected: [], abstracts: [], abstractAssists: [['123', { translation: 1, summary: '' }]], conversation: [], fields: {} })));
+});
+
+test('project index preserves named projects and rejects unsafe entries', () => {
+  const original = { activeProjectId: 'project-one', projects: [
+    { id: 'project-one', name: '論文整理', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-02T00:00:00.000Z' }
+  ] };
+  assert.deepEqual(decodeProjectIndex(encodeProjectIndex(original)), { version: 1, ...original });
+  assert.throws(() => decodeProjectIndex(JSON.stringify({ version: 1, activeProjectId: 'project-one', projects: [
+    { id: 'bad-id', name: 'Unsafe id', createdAt: '', updatedAt: '' }
+  ] })));
 });

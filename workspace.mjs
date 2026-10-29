@@ -48,3 +48,23 @@ export function decodeWorkspace(raw) {
   const chatSequence = Number.isSafeInteger(saved.chatSequence) && saved.chatSequence >= 1 ? saved.chatSequence : 1;
   return { ...saved, rounds, selected: new Map(saved.selected), abstracts: new Map(saved.abstracts), abstractAssists: new Map(abstractAssists), activeChatId, chatSequence };
 }
+
+export function encodeProjectIndex({ projects, activeProjectId = null }) {
+  return JSON.stringify({ version: 1, activeProjectId, projects });
+}
+
+export function decodeProjectIndex(raw) {
+  const saved = JSON.parse(raw);
+  if (!saved || saved.version !== 1 || !Array.isArray(saved.projects)) throw new Error('Invalid project index');
+  const ids = new Set();
+  const projects = saved.projects.map(project => {
+    if (!project || typeof project.id !== 'string' || !/^project-[A-Za-z0-9_-]+$/.test(project.id) || ids.has(project.id) ||
+        typeof project.name !== 'string' || !project.name.trim() || project.name.length > 80 ||
+        typeof project.createdAt !== 'string' || typeof project.updatedAt !== 'string') throw new Error('Invalid project');
+    ids.add(project.id);
+    return { id: project.id, name: project.name, createdAt: project.createdAt, updatedAt: project.updatedAt };
+  });
+  const activeProjectId = saved.activeProjectId === null || saved.activeProjectId === undefined ? null : saved.activeProjectId;
+  if (activeProjectId !== null && (typeof activeProjectId !== 'string' || !ids.has(activeProjectId))) throw new Error('Invalid active project');
+  return { version: 1, activeProjectId, projects };
+}
