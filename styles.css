@@ -162,7 +162,7 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
 @media(max-width:700px){.basket-menu-content{max-height:calc(100vh - 88px)}.result-sort-popover{position:fixed;top:126px;left:16px;right:16px;width:auto}.results-keyword-form{flex-wrap:wrap}.results-keyword-form input{flex-basis:calc(100% - 28px)}.results-keyword-form button{flex:1}}
 @media(min-width:701px){.ai-workspace{box-shadow:-24px 0 56px rgba(18,54,39,.22),-7px 0 20px rgba(18,54,39,.14)}}
 
-.project-gate{min-height:calc(100vh - 90px);display:grid;place-items:center;padding:40px 20px;background:linear-gradient(145deg,#f7f8f5,#eef6ef)}
+.project-gate{min-height:calc(100vh - 90px);display:grid;place-items:center;padding:40px 20px;background:transparent}
 .project-gate[hidden],.topbar-right[hidden]{display:none!important}
 .project-card-actions .text-button{min-height:32px;padding:6px 10px;border:1px solid #cbdccf;border-radius:7px;background:#fff;color:#456b54;white-space:nowrap;transition:background .15s,border-color .15s}
 .project-card-actions .text-button:hover{border-color:#98bba5;background:#eef6ef;text-decoration:none}
