@@ -807,6 +807,7 @@ globalThis.addEventListener?.('pagehide', () => { if (saveTimer) persistWorkspac
 $('ai-settings-toggle').addEventListener('click', () => {
   $('ai-settings').hidden = !$('ai-settings').hidden;
   $('ai-settings-toggle').setAttribute('aria-expanded', String(!$('ai-settings').hidden));
+  if (!$('ai-settings').hidden) $('ai-settings').scrollIntoView?.({ behavior: 'smooth', block: 'start' });
 });
 $('ai-provider').addEventListener('change', () => { aiTestAbort?.abort(); loadAiProvider(); });
 $('ai-model-list').addEventListener('change', () => { if ($('ai-model-list').value) $('ai-model').value = $('ai-model-list').value; });
