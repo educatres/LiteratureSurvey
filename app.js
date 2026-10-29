@@ -470,6 +470,20 @@ $('reset-filters').addEventListener('click', () => {
   if ($('query').value.trim()) manualSearch();
   else persistWorkspace();
 });
+$('toggle-filters').addEventListener('click', () => {
+  const content = $('filters-content');
+  const expanded = $('toggle-filters').getAttribute('aria-expanded') === 'true';
+  $('toggle-filters').setAttribute('aria-expanded', String(!expanded));
+  $('toggle-filters').setAttribute('aria-label', expanded ? '展開搜尋範圍' : '收折搜尋範圍');
+  content.hidden = expanded;
+});
+$('basket-drawer-toggle').addEventListener('click', () => {
+  const drawer = $('basket-drawer');
+  const expanded = $('basket-drawer-toggle').getAttribute('aria-expanded') === 'true';
+  drawer.classList.toggle('is-collapsed', expanded);
+  $('basket-drawer-toggle').setAttribute('aria-expanded', String(!expanded));
+  $('basket-drawer-toggle').setAttribute('aria-label', expanded ? '向左展開我的文獻清單' : '向右收起我的文獻清單');
+});
 document.querySelectorAll('.example-query').forEach(button => button.addEventListener('click', () => {
   $('query').value = button.dataset.query;
   manualSearch();
