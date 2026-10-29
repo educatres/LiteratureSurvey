@@ -605,7 +605,7 @@ function removeRound(roundId) {
   if (!window.confirm(`確定要清除「${round.label}」搜尋記錄嗎？「我的文獻清單」中的文獻不會刪除。`)) return;
   const index = rounds.findIndex(item => item.id === roundId);
   rounds.splice(index, 1);
-  aiConversation = aiConversation.filter(message => message.roundId !== roundId);
+  for (const message of aiConversation) if (message.roundId === roundId) message.roundId = 0;
   if (activeRoundId === roundId) activeRoundId = rounds[Math.max(0, index - 1)]?.id ?? 0;
   restoreRound(activeRound());
   renderRoundTabs(); renderAiConversation(); updateAiScope(); persistWorkspace();
@@ -637,10 +637,8 @@ function restoreRound(round) {
     status(`${round.label}尚未搜尋文獻。`);
   }
 }
-function roundContext(round) {
-  const lineage = [];
-  for (let node = round; node; node = rounds.find(item => item.id === node.parent)) lineage.unshift(node.id);
-  return aiConversation.filter(message => lineage.includes(message.roundId)).map(({ role, content, searchQuery }) => ({ role, content, ...(searchQuery ? { searchQuery } : {}) }));
+function conversationContext() {
+  return aiConversation.map(({ role, content, searchQuery }) => ({ role, content, ...(searchQuery ? { searchQuery } : {}) }));
 }
 function addRound(label, parent = activeRoundId) {
   const round = { id: nextRoundId++, label, parent, snapshot: null };
@@ -648,26 +646,25 @@ function addRound(label, parent = activeRoundId) {
   return round;
 }
 function renderRoundTabs() {
-  for (const id of ['results-round-tabs', 'ai-round-tabs']) {
-    const container = $(id); container.replaceChildren();
-    for (const round of rounds) {
-      const tab = document.createElement('div'); tab.className = `round-tab${round.id === 0 ? ' initial-round' : ''}`;
-      const select = document.createElement('button'); select.type = 'button'; select.className = 'round-tab-select';
-      const label = document.createElement('span'); label.className = 'round-tab-label'; label.textContent = round.label; select.append(label); tab.append(select);
-      let close = null;
-      if (round.id !== 0) {
-        close = document.createElement('button'); close.type = 'button'; close.className = 'round-tab-close'; close.textContent = '×';
-        close.setAttribute('aria-label', '清除這筆搜尋記錄'); tab.append(close);
-      }
-      tab.title = round.label; tab.setAttribute('aria-pressed', String(round.id === activeRoundId));
-      tab.setAttribute('aria-disabled', String(Boolean(aiAbort || state.isSearching))); select.disabled = Boolean(aiAbort || state.isSearching); if (close) close.disabled = select.disabled;
-      tab.addEventListener('click', () => {
-        if (aiAbort || state.isSearching || round.id === activeRoundId) return;
-        activeRoundId = round.id; restoreRound(round); renderRoundTabs(); renderAiConversation(); aiMessage(''); persistWorkspace();
-      });
-      close?.addEventListener('click', event => { event.stopPropagation(); removeRound(round.id); });
-      container.append(tab);
+  const container = $('results-round-tabs');
+  container.replaceChildren();
+  for (const round of rounds) {
+    const tab = document.createElement('div'); tab.className = `round-tab${round.id === 0 ? ' initial-round' : ''}`;
+    const select = document.createElement('button'); select.type = 'button'; select.className = 'round-tab-select';
+    const label = document.createElement('span'); label.className = 'round-tab-label'; label.textContent = round.label; select.append(label); tab.append(select);
+    let close = null;
+    if (round.id !== 0) {
+      close = document.createElement('button'); close.type = 'button'; close.className = 'round-tab-close'; close.textContent = '×';
+      close.setAttribute('aria-label', '清除這筆搜尋記錄'); tab.append(close);
     }
+    tab.title = round.label; tab.setAttribute('aria-pressed', String(round.id === activeRoundId));
+    tab.setAttribute('aria-disabled', String(Boolean(aiAbort || state.isSearching))); select.disabled = Boolean(aiAbort || state.isSearching); if (close) close.disabled = select.disabled;
+    tab.addEventListener('click', () => {
+      if (aiAbort || state.isSearching || round.id === activeRoundId) return;
+      activeRoundId = round.id; restoreRound(round); renderRoundTabs(); renderAiConversation(); aiMessage(''); persistWorkspace();
+    });
+    close?.addEventListener('click', event => { event.stopPropagation(); removeRound(round.id); });
+    container.append(tab);
   }
 }
 async function manualSearch() {
@@ -726,7 +723,7 @@ function updateAiScope() {
 function renderAiConversation() {
   const container = $('ai-conversation');
   container.replaceChildren();
-  const messages = aiConversation.filter(message => message.roundId === activeRoundId);
+  const messages = aiConversation;
   if (!messages.length) {
     const empty = document.createElement('p'); empty.className = 'ai-empty'; empty.textContent = '選取文獻後開始整理，也可以直接輸入研究問題。'; container.append(empty);
   }
@@ -751,7 +748,7 @@ function renderAiConversation() {
   $('ai-download').disabled = !aiConversation.some(message => message.role === 'assistant');
 }
 function setAiBusy(busy) {
-  for (const id of ['ai-analyze', 'ai-send', 'ai-new', 'ai-settings-toggle', 'ai-example-organize', 'ai-example-compare', 'ai-example-extend']) $(id).disabled = busy;
+  for (const id of ['ai-analyze', 'ai-send', 'ai-clear-conversation', 'ai-settings-toggle', 'ai-example-organize', 'ai-example-compare', 'ai-example-extend']) $(id).disabled = busy;
   $('ai-cancel').hidden = !busy;
   document.querySelectorAll('.ai-search-button').forEach(button => { button.disabled = busy; });
   renderRoundTabs();
@@ -772,8 +769,8 @@ async function runAiAnalysis(question, { papers, query, config, controller }) {
   }
   const records = papers.map(p => ({ ...p, abstract: state.abstractCache.get(p.pmid) || '' }));
   const available = records.filter(p => p.abstract).length;
-  const prompt = buildAnalysisPrompt({ query, papers: records, conversation: roundContext(activeRound()), question });
-  if (prompt.length > 240000) throw new Error('文獻摘要與對話過長，請減少選取篇數或開始新對話。');
+  const prompt = buildAnalysisPrompt({ query, papers: records, conversation: conversationContext(), question });
+  if (prompt.length > 240000) throw new Error('文獻摘要與對話過長，請減少選取篇數或清除對話記錄。');
   if (controller.signal.aborted) throw abortError();
   aiMessage(`已取得 ${available}/${papers.length} 篇摘要，正在傳送給 ${PROVIDERS[config.provider].label} 分析…`);
   const answer = await generateText({ ...config, prompt, signal: controller.signal });
@@ -869,14 +866,14 @@ $('ai-example-compare').addEventListener('click', () => askAi('請逐篇摘要�
 $('ai-example-extend').addEventListener('click', () => askAi('請根據「我的文獻清單」的摘要，歸納研究方向與可能的研究缺口，提出能幫助我縮小範圍的問題；資訊足夠時，提供適合延伸查找相關文獻的 PubMed 搜尋式。', { requireSelection: true }));
 $('ai-form').addEventListener('submit', event => { event.preventDefault(); const question = $('ai-question').value.trim(); if (question) askAi(question); });
 $('ai-cancel').addEventListener('click', () => aiAbort?.abort());
-$('ai-new').addEventListener('click', () => {
-  const snapshot = activeRound().snapshot;
-  const round = addRound(`新對話 ${nextRoundId}`, null);
-  round.snapshot = snapshot && { ...snapshot, cursors: new Map(snapshot.cursors), pages: { ...snapshot.pages } };
-  restoreRound(round); renderRoundTabs(); renderAiConversation(); aiMessage('已開始新對話。'); persistWorkspace();
+$('ai-clear-conversation').addEventListener('click', () => {
+  if (!aiConversation.length) { aiMessage('目前沒有可清除的對話記錄。'); return; }
+  if (!window.confirm('確定要清除所有 AI 對話記錄嗎？這不會刪除搜尋記錄或「我的文獻清單」。')) return;
+  aiConversation = [];
+  renderAiConversation(); aiMessage('已清除對話記錄。'); persistWorkspace();
 });
 $('ai-download').addEventListener('click', () => {
-  const report = aiConversation.map(message => `【${rounds.find(round => round.id === message.roundId)?.label || '對話'}｜${message.role === 'user' ? '研究問題' : 'AI 研究助理'}】\n${message.content}${message.searchQuery ? `\n\n【建議的 PubMed 搜尋式】\n${message.searchQuery}` : ''}`).join('\n\n');
+  const report = aiConversation.map(message => `【${message.role === 'user' ? '研究問題' : 'AI 研究助理'}】\n${message.content}${message.searchQuery ? `\n\n【建議的 PubMed 搜尋式】\n${message.searchQuery}` : ''}`).join('\n\n');
   const url = URL.createObjectURL(new Blob([report], { type: 'text/plain;charset=utf-8' }));
   const link = document.createElement('a'); link.href = url; link.download = 'litfetch-ai-report.txt'; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
 });

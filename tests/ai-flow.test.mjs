@@ -23,6 +23,7 @@ test('a suggested search analyzes the new results, not previously selected paper
     querySelectorAll: selector => selector === '.ai-search-button' ? allChildren(elements['ai-conversation']).filter(element => element.className.includes('ai-search-button')) : []
   };
   globalThis.Option = class extends Element { constructor(label, value) { super(); this.textContent = label; this.value = value; } };
+  globalThis.window = { confirm: () => true };
   globalThis.localStorage = { getItem: key => key === 'litfetch.ai.settings.v1' ? JSON.stringify({ provider: 'openai', services: { openai: { key: 'test-key', model: 'text-model' } } }) : null, setItem() {} };
   globalThis.DOMParser = class {
     parseFromString(text) {
@@ -92,17 +93,19 @@ test('a suggested search analyzes the new results, not previously selected paper
   assert.match(elements['results-list'].innerHTML, /PMID 111/);
   assert.equal(elements.query.value, 'old_topic');
   assert.match(elements['ai-conversation'].children[1].children[1].textContent, /可以檢索/);
-  elements['ai-round-tabs'].children[2].dispatch('click');
+  assert.match(elements['ai-conversation'].children[3].children[1].textContent, /整理新文獻/);
+  assert.equal(elements['ai-round-tabs'], undefined, 'the AI workspace uses one conversation without tabs');
+  resultTabs[2].dispatch('click');
   assert.match(elements['results-list'].innerHTML, /PMID 333/);
   assert.equal(elements.query.value, 'new_topic');
-  assert.match(elements['ai-conversation'].children[1].children[1].textContent, /整理新文獻/);
+  assert.match(elements['ai-conversation'].children[3].children[1].textContent, /整理新文獻/);
   elements['ai-example-organize'].dispatch('click');
   await waitFor(() => prompts.length === 3 && !elements['ai-send'].disabled);
   const selectedRecords = prompts[2].split('文獻資料（JSON）：')[1].split('\n先前對話')[0];
   assert.match(selectedRecords, /"pmid":"111"/);
   assert.match(selectedRecords, /abstract text 111/);
   assert.doesNotMatch(selectedRecords, /"pmid":"333"/, 'example must use the basket even in an AI search tab');
-  const failButton = document.querySelectorAll('.ai-search-button')[0];
+  const failButton = document.querySelectorAll('.ai-search-button').at(-1);
   failButton.dispatch('click');
   await waitFor(() => elements['ai-status'].textContent.includes('分析失敗') && !elements['ai-send'].disabled);
   assert.equal(prompts.length, 3, 'failed searches must not invoke AI on stale results');
@@ -113,4 +116,9 @@ test('a suggested search analyzes the new results, not previously selected paper
   elements['ai-cancel'].dispatch('click');
   await waitFor(() => elements['ai-status'].textContent.includes('已取消') && !elements['ai-send'].disabled);
   assert.equal(prompts.length, 3, 'cancelled searches must not invoke AI');
+  elements['ai-clear-conversation'].dispatch('click');
+  assert.equal(elements['ai-conversation'].children.length, 1);
+  assert.match(elements['ai-conversation'].children[0].textContent, /選取文獻後開始整理/);
+  assert.equal(elements['ai-download'].disabled, true);
+  assert.equal(elements['results-round-tabs'].children.length, 3, 'clearing the conversation keeps search history');
 });

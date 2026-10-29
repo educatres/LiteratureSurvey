@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#f7f8f5">
   <meta name="description" content="搜尋 PubMed、篩選與挑選文獻，批次下載摘要及可合法取得的開放取用全文。">
   <title>LiteratureSurvey — PubMed 文獻批次下載工作台</title>
-  <link rel="stylesheet" href="./styles.css?v=20261029-20">
-  <script type="module" src="./app.js?v=20261029-20"></script>
+  <link rel="stylesheet" href="./styles.css?v=20261029-21">
+  <script type="module" src="./app.js?v=20261029-21"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -51,9 +51,8 @@
         </section>
 
         <section class="ai-workspace" aria-label="AI RESEARCH ASSISTANT">
-        <div class="ai-heading"><div><span class="section-overline">AI RESEARCH ASSISTANT</span></div><div class="ai-heading-actions"><button type="button" id="ai-new" class="subtle-button">開始新對話</button><button type="button" id="ai-download" class="subtle-button" disabled>下載對話報告</button></div></div>
+        <div class="ai-heading"><div><span class="section-overline">AI RESEARCH ASSISTANT</span></div><div class="ai-heading-actions"><button type="button" id="ai-clear-conversation" class="subtle-button">清除對話記錄</button><button type="button" id="ai-download" class="subtle-button" disabled>下載對話報告</button></div></div>
         <div class="ai-body">
-          <div id="ai-round-tabs" class="round-tabs" aria-label="對話與搜尋紀錄"></div>
           <div class="ai-scope" id="ai-scope">尚無文獻：可先描述研究方向，AI 會協助擬定搜尋條件。</div>
           <button type="button" id="ai-cancel" class="subtle-button ai-cancel-button" hidden>取消分析</button>
           <div class="ai-examples" aria-label="對話範例"><p>試試這些問題</p><div><button type="button" id="ai-analyze" class="ai-primary">整理文獻並提出問題</button><button type="button" id="ai-example-organize">整理我的文獻清單</button><button type="button" id="ai-example-compare">摘要與比較研究</button><button type="button" id="ai-example-extend">根據清單延伸搜尋</button></div><small>這些範例會分析「我的文獻清單」中已選取的文獻摘要。</small></div>
