@@ -588,6 +588,16 @@ $('toggle-filters').addEventListener('click', () => {
   } else if (window.innerWidth <= 700) { panel.style.left = ''; panel.style.top = ''; }
 });
 const topbarMenus = [...document.querySelectorAll('.topbar-right details')];
+for (const id of ['close-basket-menu', 'close-search-settings', 'close-ai-settings']) {
+  const button = $(id);
+  button.addEventListener('click', () => {
+    const menu = button.closest('details');
+    menu.open = false;
+    const trigger = menu.querySelector('summary');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.focus({ preventScroll: true });
+  });
+}
 function positionBasketMenu() {
   const menu = document.querySelector('.basket-menu');
   const panel = menu?.querySelector('.basket-menu-content');
