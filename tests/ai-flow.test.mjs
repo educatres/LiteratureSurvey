@@ -139,6 +139,8 @@ test('a suggested search analyzes the new results, not previously selected paper
   assert.equal(elements['abstract-translation-panel'].hidden, false);
   assert.match(elements['abstract-translation'].textContent, /整理新文獻/);
   assert.match(elements['results-list'].innerHTML, /paper-translation-badge/);
+  assert.match(elements['results-list'].innerHTML, /paper-ai-tooltip/);
+  assert.match(elements['results-list'].innerHTML, /整理新文獻/);
   elements['abstract-summarize'].dispatch('click');
   await waitFor(() => prompts.length === 6 && !elements['abstract-summarize'].disabled);
   assert.match(prompts[5], /研究目的／方法／主要結果／結論/);
