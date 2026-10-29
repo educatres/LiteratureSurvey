@@ -541,7 +541,7 @@ function renderRoundTabs() {
     const container = $(id); container.replaceChildren();
     for (const round of rounds) {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'round-tab';
-      button.textContent = round.label; button.setAttribute('aria-pressed', String(round.id === activeRoundId));
+      button.textContent = round.label; button.title = round.label; button.setAttribute('aria-pressed', String(round.id === activeRoundId));
       button.disabled = Boolean(aiAbort || state.isSearching);
       button.addEventListener('click', () => {
         if (aiAbort || state.isSearching || round.id === activeRoundId) return;
@@ -557,10 +557,9 @@ async function manualSearch() {
   const pending = performSearch(true); renderRoundTabs();
   const result = await pending;
   if (result) {
-    const round = previous.snapshot ? addRound(`搜尋 ${nextRoundId}`) : previous;
+    const round = addRound(`搜尋 ${nextRoundId} · ${result.baseQuery}`);
     saveRoundResults(round, result); renderRoundTabs(); renderAiConversation(); updateAiScope();
-  } else if (previous.snapshot) { const notice = $('results-notice').textContent; restoreRound(previous); status(notice, true); renderRoundTabs(); }
-  else renderRoundTabs();
+  } else { const notice = $('results-notice').textContent; restoreRound(previous); status(notice, true); renderRoundTabs(); }
 }
 async function changeResultPage(page) {
   if (aiAbort || state.isSearching || !activeRound().snapshot) return;
@@ -596,7 +595,7 @@ function loadAiProvider() {
   aiSettingsMessage('');
 }
 function updateAiScope() {
-  const useSelected = !activeRound().fromAiSearch && state.selected.size > 0;
+  const useSelected = state.selected.size > 0;
   const count = useSelected ? state.selected.size : state.items.length;
   $('ai-scope').textContent = count ? `分析範圍：${useSelected ? '已選取文獻' : '目前分頁的搜尋結果這一頁'} ${count} 篇；送出前會取得可用摘要。` : '尚無文獻：可先描述研究方向，AI 會協助擬定搜尋條件。';
 }
@@ -625,7 +624,7 @@ function renderAiConversation() {
   $('ai-download').disabled = !aiConversation.some(message => message.role === 'assistant');
 }
 function setAiBusy(busy) {
-  for (const id of ['ai-analyze', 'ai-send', 'ai-new', 'ai-settings-toggle']) $(id).disabled = busy;
+  for (const id of ['ai-analyze', 'ai-send', 'ai-new', 'ai-settings-toggle', 'ai-example-organize', 'ai-example-compare', 'ai-example-extend']) $(id).disabled = busy;
   $('ai-cancel').hidden = !busy;
   document.querySelectorAll('.ai-search-button').forEach(button => { button.disabled = busy; });
   renderRoundTabs();
@@ -668,8 +667,9 @@ async function withAiTask(work) {
     aiMessage(error.name === 'AbortError' ? '已取消分析。' : `分析失敗：${error.message}`, error.name !== 'AbortError');
   } finally { aiAbort = null; setAiBusy(false); }
 }
-async function askAi(question) {
-  const papers = [...(!activeRound().fromAiSearch && state.selected.size ? state.selected.values() : state.items)];
+async function askAi(question, { requireSelection = false } = {}) {
+  if (requireSelection && !state.selected.size) { aiMessage('請先在搜尋結果勾選文獻，加入「我的文獻清單」。', true); return; }
+  const papers = [...(state.selected.size ? state.selected.values() : state.items)];
   const query = state.lastQuery;
   await withAiTask((config, controller) => runAiAnalysis(question, { papers, query, config, controller }));
 }
@@ -684,7 +684,7 @@ async function searchAndAnalyze(suggestion) {
     try { result = await performSearch(true, controller.signal); }
     catch (error) { restoreRound(previous); throw error; }
     if (!result) throw new Error('搜尋未完成，請重試。');
-    const round = addRound(`AI 搜尋 ${nextRoundId}`);
+    const round = addRound(`AI 搜尋 ${nextRoundId} · ${result.baseQuery}`);
     round.fromAiSearch = true;
     saveRoundResults(round, result);
     renderRoundTabs(); renderAiConversation(); updateAiScope();
@@ -732,6 +732,9 @@ $('ai-test').addEventListener('click', async () => {
   finally { aiTestAbort = null; $('ai-test').disabled = false; }
 });
 $('ai-analyze').addEventListener('click', () => askAi('請根據目前提供的文獻摘要整理研究主題、主要發現與差異，標示 PMID，並提出能協助我縮小研究範圍的問題。'));
+$('ai-example-organize').addEventListener('click', () => askAi('請整理「我的文獻清單」中各篇文獻摘要，按研究主題歸類，標示 PMID、主要發現與證據限制；缺少摘要的文獻請明確註明。', { requireSelection: true }));
+$('ai-example-compare').addEventListener('click', () => askAi('請逐篇摘要「我的文獻清單」中的文獻，比較各篇的研究對象、方法、主要結果與差異，標示 PMID；摘要未提及的資訊請註明未提供。', { requireSelection: true }));
+$('ai-example-extend').addEventListener('click', () => askAi('請根據「我的文獻清單」的摘要，歸納研究方向與可能的研究缺口，提出能幫助我縮小範圍的問題；資訊足夠時，提供適合延伸查找相關文獻的 PubMed 搜尋式。', { requireSelection: true }));
 $('ai-form').addEventListener('submit', event => { event.preventDefault(); const question = $('ai-question').value.trim(); if (question) askAi(question); });
 $('ai-cancel').addEventListener('click', () => aiAbort?.abort());
 $('ai-new').addEventListener('click', () => {
