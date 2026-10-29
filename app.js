@@ -477,12 +477,9 @@ $('toggle-filters').addEventListener('click', () => {
   $('toggle-filters').setAttribute('aria-label', expanded ? '展開搜尋範圍' : '收折搜尋範圍');
   content.hidden = expanded;
 });
-$('basket-drawer-toggle').addEventListener('click', () => {
-  const drawer = $('basket-drawer');
-  const expanded = $('basket-drawer-toggle').getAttribute('aria-expanded') === 'true';
-  drawer.classList.toggle('is-collapsed', expanded);
-  $('basket-drawer-toggle').setAttribute('aria-expanded', String(!expanded));
-  $('basket-drawer-toggle').setAttribute('aria-label', expanded ? '向左展開我的文獻清單' : '向右收起我的文獻清單');
+const topbarMenus = [...document.querySelectorAll('.topbar-right details')];
+for (const menu of topbarMenus) menu.addEventListener('toggle', () => {
+  if (menu.open) topbarMenus.filter(other => other !== menu).forEach(other => { other.open = false; });
 });
 document.querySelectorAll('.example-query').forEach(button => button.addEventListener('click', () => {
   $('query').value = button.dataset.query;

@@ -6,22 +6,21 @@
   <meta name="theme-color" content="#f7f8f5">
   <meta name="description" content="搜尋 PubMed、篩選與挑選文獻，批次下載摘要及可合法取得的開放取用全文。">
   <title>LiteratureSurvey — PubMed 文獻批次下載工作台</title>
-  <link rel="stylesheet" href="./styles.css?v=20261029-11">
-  <script type="module" src="./app.js?v=20261029-11"></script>
+  <link rel="stylesheet" href="./styles.css?v=20261029-12">
+  <script type="module" src="./app.js?v=20261029-12"></script>
 </head>
 <body>
   <div class="page-shell">
     <header class="topbar">
-      <a class="brand" href="./" aria-label="LiteratureSurvey 首頁">
+      <div class="brand-cluster"><a class="brand" href="./" aria-label="LiteratureSurvey 首頁">
         <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M7 7.5c3.1-1.1 6.1-.7 9 1.5 2.9-2.2 5.9-2.6 9-1.5v17c-3.1-1.1-6.1-.7-9 1.5-2.9-2.2-5.9-2.6-9-1.5z"/><path d="M16 9v17M10 12.5c1.2-.1 2.3.1 3.4.6M19 13.1c1.1-.5 2.2-.7 3.4-.6M10 17c1.2-.1 2.3.1 3.4.6M19 17.6c1.1-.5 2.2-.7 3.4-.6"/></svg></span>
         <span>Literature<span class="brand-accent">Survey</span></span>
-      </a>
-      <div class="topbar-right"><details class="settings-details topbar-settings"><summary><span aria-hidden="true">⚙</span> 提高搜尋速率 <span class="optional-tag">選填</span></summary><div class="settings-content"><label class="field-label" for="api-key">NCBI API Key</label><input id="api-key" type="password" spellcheck="false" autocomplete="off" placeholder="輸入 NCBI API Key"><p class="field-help">不填也能搜尋。使用自己的 NCBI Key 可提高官方 API 速率限制；Key 只存在此頁工作階段，不會儲存到網站。</p><label class="field-label" for="contact-email">聯絡 Email（建議填寫）</label><input id="contact-email" type="email" autocomplete="email" placeholder="you@university.edu"><p class="field-help">依 NCBI 建議提供，方便在 API 使用異常時聯繫。</p></div></details><span class="online-dot"></span> NCBI PubMed 官方資料 <span class="topbar-divider"></span> <a href="https://pubmed.ncbi.nlm.nih.gov/" target="_blank" rel="noopener noreferrer">前往 PubMed <span aria-hidden="true">↗</span></a></div>
+      </a><h1 id="page-title" class="topbar-title">文獻搜尋，<span>一次整理到位。</span></h1></div>
+      <div class="topbar-right"><details class="basket-menu"><summary><span aria-hidden="true">▤</span><span class="topbar-action-label">我的文獻清單</span><span class="basket-count" id="basket-count">0</span></summary><div class="basket-menu-content"><p class="basket-menu-note">跨頁勾選的文章會集中顯示在這裡。</p><div id="basket-items" class="basket-items"><p class="basket-empty">尚未選取文獻。<br>點選搜尋結果旁的方框加入清單。</p></div><div class="basket-footer"><div class="basket-summary"><span>已選文獻</span><strong id="selected-count">0 篇</strong></div><button type="button" id="download-abstracts" class="download-button" disabled><span>↓</span> 下載摘要 ZIP</button><button type="button" id="download-fulltext" class="download-outline" disabled><span>↓</span> 下載開放全文 XML ZIP</button><a id="retry-download" class="retry-download" hidden>若沒有自動下載，點此取得 ZIP ↗</a><p class="download-note">每次最多 100 篇；摘要匯出包含文獻資訊 CSV。僅 PMC 開放取用子集可批次下載全文。</p></div></div></details><details class="settings-details topbar-settings"><summary><span aria-hidden="true">⚙</span><span class="topbar-action-label">提高搜尋速率</span><span class="optional-tag">選填</span></summary><div class="settings-content"><label class="field-label" for="api-key">NCBI API Key</label><input id="api-key" type="password" spellcheck="false" autocomplete="off" placeholder="輸入 NCBI API Key"><p class="field-help">不填也能搜尋。使用自己的 NCBI Key 可提高官方 API 速率限制；Key 只存在此頁工作階段，不會儲存到網站。</p><label class="field-label" for="contact-email">聯絡 Email（建議填寫）</label><input id="contact-email" type="email" autocomplete="email" placeholder="you@university.edu"><p class="field-help">依 NCBI 建議提供，方便在 API 使用異常時聯繫。</p></div></details><span class="online-dot"></span> NCBI PubMed 官方資料 <span class="topbar-divider"></span> <a href="https://pubmed.ncbi.nlm.nih.gov/" target="_blank" rel="noopener noreferrer">前往 PubMed <span aria-hidden="true">↗</span></a></div>
     </header>
 
     <main>
-      <section class="hero" aria-labelledby="page-title">
-        <h1 id="page-title">文獻搜尋，<span>一次整理到位。</span></h1>
+      <section class="hero" aria-label="文獻搜尋">
         <form id="search-form" class="search-form">
           <label for="query" class="sr-only">PubMed 搜尋關鍵字或查詢語法</label>
           <span class="search-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.7"/><path d="m16 16 5 5"/></svg></span>
@@ -53,11 +52,6 @@
         </section>
 
         <section class="ai-workspace" aria-labelledby="ai-title">
-        <aside class="basket-drawer" id="basket-drawer" aria-labelledby="basket-title">
-          <button type="button" id="basket-drawer-toggle" class="basket-drawer-toggle" aria-expanded="true" aria-controls="basket-drawer-body" aria-label="向右收起我的文獻清單"><span aria-hidden="true">›</span></button>
-          <div class="basket-drawer-header"><span class="drawer-tab-icon" aria-hidden="true">▤</span><h2 id="basket-title">我的文獻清單 <span class="basket-count" id="basket-count">0</span></h2></div>
-          <div id="basket-drawer-body" class="basket-drawer-body"><p class="basket-drawer-note">跨頁勾選，最後一次匯出。</p><div id="basket-items" class="basket-items"><p class="basket-empty">尚未選取文獻。<br>點選搜尋結果旁的方框加入清單。</p></div><div class="basket-footer"><div class="basket-summary"><span>已選文獻</span><strong id="selected-count">0 篇</strong></div><button type="button" id="download-abstracts" class="download-button" disabled><span>↓</span> 下載摘要 ZIP</button><button type="button" id="download-fulltext" class="download-outline" disabled><span>↓</span> 下載開放全文 XML ZIP</button><a id="retry-download" class="retry-download" hidden>若沒有自動下載，點此取得 ZIP ↗</a><p class="download-note">每次最多 100 篇；摘要匯出包含文獻資訊 CSV。僅 PMC 開放取用子集可批次下載全文。</p></div></div>
-        </aside>
         <div class="ai-heading"><div><span class="section-overline">AI RESEARCH ASSISTANT</span><h2 id="ai-title">AI 文獻探索</h2><p>整理已找到的摘要，或透過對話逐步釐清研究方向。</p></div><button type="button" id="ai-settings-toggle" class="subtle-button" aria-expanded="false" aria-controls="ai-settings">⚙ 連接你的 AI</button></div>
         <div id="ai-settings" class="ai-settings" hidden>
           <div class="ai-settings-grid"><label>AI 服務<select id="ai-provider"><option value="cgu">CGU</option><option value="openai">OpenAI</option><option value="xai">Grok（xAI）</option><option value="google">Google AI Studio</option></select></label><label>API Key<input id="ai-key" type="password" autocomplete="off" spellcheck="false" placeholder="貼上此服務的 API Key"></label><label>選擇模型<select id="ai-model-list"><option value="">請先讀取模型</option></select></label><label>或手動輸入模型 ID<input id="ai-model" type="text" autocomplete="off" placeholder="選擇模型或輸入模型 ID"></label></div>
