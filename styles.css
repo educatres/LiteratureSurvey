@@ -237,6 +237,7 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
 .ai-message-heading>strong{display:block;margin:0;color:#327151;font-size:11px}
 .ai-assistant{padding-right:0!important}
 .ai-message-heading .conversation-save-button,.ai-message-heading .conversation-continue-button{position:static;flex:none;width:23px;height:23px;font-size:15px}
+.abstract-ai-content.has-markdown{white-space:normal}
 
 /* One-click search-history naming and a compact results toolbar. */
 .round-tab-rename{display:inline-flex;align-items:center;justify-content:center;flex:none;width:18px;height:18px;padding:0;border:0;border-radius:50%;background:transparent;color:#668474;font-size:12px;line-height:1;opacity:.78;cursor:pointer}

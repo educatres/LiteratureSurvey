@@ -343,8 +343,13 @@ function renderAbstractView() {
   $('abstract-side-results').hidden = !hasAiResult;
   $('abstract-translation-panel').hidden = !abstractView.translation;
   $('abstract-summary-panel').hidden = !abstractView.summary;
-  $('abstract-translation').textContent = abstractView.translation;
-  $('abstract-summary').textContent = abstractView.summary;
+  for (const [id, content] of [['abstract-translation', abstractView.translation], ['abstract-summary', abstractView.summary]]) {
+    const target = $(id);
+    if (!content) { target.textContent = ''; target.classList.toggle('has-markdown', false); continue; }
+    const formatted = renderMarkdown(content);
+    target.classList.toggle('has-markdown', formatted !== null);
+    if (formatted === null) target.textContent = content; else target.innerHTML = formatted;
+  }
 }
 
 async function showAbstract(pmid) {
