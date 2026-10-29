@@ -502,10 +502,23 @@ $('toggle-filters').addEventListener('click', () => {
   } else if (window.innerWidth <= 700) { panel.style.left = ''; panel.style.top = ''; }
 });
 const topbarMenus = [...document.querySelectorAll('.topbar-right details')];
+function positionBasketMenu() {
+  const menu = document.querySelector('.basket-menu');
+  const panel = menu?.querySelector('.basket-menu-content');
+  const trigger = menu?.querySelector('summary');
+  if (!menu?.open || !panel || !trigger || window.innerWidth <= 700) return;
+  const triggerRect = trigger.getBoundingClientRect();
+  const panelWidth = panel.getBoundingClientRect().width;
+  panel.style.left = `${Math.max(8, Math.min(triggerRect.left, window.innerWidth - panelWidth - 8))}px`;
+  panel.style.right = 'auto';
+  panel.style.top = `${triggerRect.bottom + 8}px`;
+}
 for (const menu of topbarMenus) menu.addEventListener('toggle', () => {
   menu.querySelector('summary')?.setAttribute('aria-expanded', String(menu.open));
   if (menu.open) topbarMenus.filter(other => other !== menu).forEach(other => { other.open = false; });
+  if (menu.classList.contains('basket-menu')) positionBasketMenu();
 });
+globalThis.addEventListener?.('resize', positionBasketMenu);
 document.querySelectorAll('.example-query').forEach(button => button.addEventListener('click', () => {
   $('query').value = button.dataset.query;
   manualSearch();
