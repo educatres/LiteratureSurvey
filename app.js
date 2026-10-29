@@ -581,6 +581,7 @@ try {
 let aiConversation = [];
 let aiAbort = null;
 let aiTestAbort = null;
+let conversationSequence = 0;
 
 const WORKSPACE_STORAGE = 'literaturesurvey.workspace.v1';
 const WORKSPACE_FIELDS = ['query', 'year-from', 'year-to', 'article-type', 'sort-by', 'open-access', 'results-keyword', 'contact-email', 'ai-question'];
@@ -697,6 +698,13 @@ function restoreRound(round) {
 function conversationContext() {
   return aiConversation.map(({ role, content, searchQuery }) => ({ role, content, ...(searchQuery ? { searchQuery } : {}) }));
 }
+function ensureConversationIds() {
+  for (const message of aiConversation) {
+    const match = String(message.id || '').match(/^conversation-(\d+)$/);
+    if (match) conversationSequence = Math.max(conversationSequence, Number(match[1]));
+  }
+  for (const message of aiConversation) if (!message.id) message.id = `conversation-${++conversationSequence}`;
+}
 function isHiddenConversationQuestion(message) {
   return message.role === 'user' && (message.hidden === true || message.content === DEFAULT_ANALYSIS_QUESTION);
 }
@@ -781,6 +789,7 @@ function updateAiScope() {
   $('ai-scope').textContent = count ? `分析範圍：${useSelected ? '已選取文獻' : '目前分頁的搜尋結果這一頁'} ${count} 篇；送出前會取得可用摘要。` : '尚無文獻：可先描述研究方向，AI 會協助擬定搜尋條件。';
 }
 function renderAiConversation() {
+  ensureConversationIds();
   const container = $('ai-conversation');
   container.replaceChildren();
   const messages = aiConversation.filter(message => !isHiddenConversationQuestion(message));
@@ -789,6 +798,7 @@ function renderAiConversation() {
   }
   for (const message of messages) {
     const item = document.createElement('div'); item.className = `ai-message ${message.role === 'user' ? 'ai-user' : 'ai-assistant'}`;
+    if (message.role === 'assistant') item.id = `ai-message-${message.id}`;
     const label = document.createElement('strong'); label.textContent = message.role === 'user' ? '研究問題' : 'AI 研究助理';
     const body = document.createElement('div'); body.className = 'ai-message-body';
     const formatted = message.role === 'assistant' ? renderMarkdown(message.content) : null;
@@ -803,9 +813,32 @@ function renderAiConversation() {
       button.addEventListener('click', () => searchAndAnalyze(input.value));
       suggestion.append(hint, input, button); item.append(suggestion);
     }
+    if (message.role === 'assistant') {
+      const saveButton = document.createElement('button'); saveButton.type = 'button'; saveButton.className = 'conversation-save-button';
+      saveButton.textContent = message.noted ? '♥' : '♡'; saveButton.setAttribute('aria-label', message.noted ? '從對話筆記移除' : '加入對話筆記'); saveButton.setAttribute('aria-pressed', String(Boolean(message.noted)));
+      saveButton.addEventListener('click', () => { message.noted = !message.noted; renderAiConversation(); persistWorkspace(); });
+      item.append(saveButton);
+    }
     container.append(item);
   }
   $('ai-download').disabled = !aiConversation.some(message => message.role === 'assistant');
+  renderNotebook();
+}
+function renderNotebook() {
+  const entries = aiConversation.filter(message => message.role === 'assistant' && message.noted);
+  $('notebook-count').textContent = String(entries.length);
+  $('notebook-empty').hidden = entries.length > 0;
+  const list = $('notebook-list'); list.replaceChildren();
+  for (const assistant of entries) {
+    const index = aiConversation.indexOf(assistant);
+    const question = index > 0 && aiConversation[index - 1].role === 'user' ? aiConversation[index - 1].content : 'AI 對話';
+    const entry = document.createElement('button'); entry.type = 'button'; entry.className = 'notebook-entry'; entry.setAttribute('data-conversation-id', assistant.id);
+    const title = document.createElement('strong'); title.textContent = question.slice(0, 80) || 'AI 對話';
+    const preview = document.createElement('span'); preview.textContent = assistant.content.replace(/\s+/g, ' ').slice(0, 140);
+    entry.append(title, preview);
+    entry.addEventListener('click', () => { $('notebook-menu').open = false; document.getElementById(`ai-message-${assistant.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+    list.append(entry);
+  }
 }
 function setAiBusy(busy) {
   for (const id of ['ai-analyze', 'ai-send', 'ai-clear-conversation', 'ai-settings-toggle', 'ai-example-organize', 'ai-example-compare', 'ai-example-extend']) $(id).disabled = busy;
