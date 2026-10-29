@@ -257,6 +257,7 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
 .ai-user:before{content:"";position:absolute;top:-10px;left:0;right:0;height:2px;border-radius:2px;background:linear-gradient(90deg,#d5e2d6,#8fb59a 45%,#d5e2d6)}
 .paper-ai-marker{position:relative;display:inline-flex}
 .paper-ai-badge{display:inline-flex;align-items:center;justify-content:center;min-width:25px;height:22px;padding:0 6px;border:1px solid;border-radius:6px;font-size:9px;font-weight:850;line-height:1;cursor:pointer}
+.paper-abstract-badge{border-color:#8db79a;background:#edf7ef;color:#3f7352}
 .paper-translation-badge{border-color:#e1a63a;background:#fff6d9;color:#885b0a}
 .paper-summary-badge{border-color:#8aa7d4;background:#eef4ff;color:#3f6195}
 .paper-ai-badge:hover,.paper-ai-badge:focus-visible{transform:translateY(-1px);box-shadow:0 3px 8px rgba(35,65,48,.14)}

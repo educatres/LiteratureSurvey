@@ -133,6 +133,8 @@ test('a suggested search analyzes the new results, not previously selected paper
   assert.equal(elements['abstract-dialog'].open, true);
   await waitFor(() => elements['abstract-body'].textContent.includes('abstract text 333'));
   assert.match(elements['abstract-body'].textContent, /abstract text 333/);
+  assert.match(elements['results-list'].innerHTML, /paper-abstract-badge/);
+  assert.match(elements['results-list'].innerHTML, /abstract text 333/);
   elements['abstract-translate'].dispatch('click');
   await waitFor(() => prompts.length === 5 && !elements['abstract-translate'].disabled);
   assert.match(prompts[4], /完整翻譯成繁體中文/);

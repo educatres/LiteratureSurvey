@@ -228,9 +228,10 @@ function renderResults() {
       const selected = state.selected.has(p.pmid);
       const authors = p.authors.slice(0, 4).join(', ') + (p.authors.length > 4 ? ' et al.' : '');
       const articleType = p.type.find(x => /review|trial|meta-analysis/i.test(x)) || '';
+      const cachedAbstract = state.abstractCache.get(p.pmid) || '';
       const assisted = state.abstractAssistCache.get(p.pmid) || {};
       const tooltipHtml = content => renderMarkdown(content) ?? escapeHtml(content);
-      const assistBadges = `${assisted.translation ? `<span class="paper-ai-marker"><button type="button" class="paper-ai-badge paper-translation-badge" data-preview="${p.pmid}" aria-label="查看已保存的中文翻譯">譯</button><span class="paper-ai-tooltip" role="tooltip"><strong>中文翻譯</strong>${tooltipHtml(assisted.translation)}</span></span>` : ''}${assisted.summary ? `<span class="paper-ai-marker"><button type="button" class="paper-ai-badge paper-summary-badge" data-preview="${p.pmid}" aria-label="查看已保存的 AI 摘要">AI</button><span class="paper-ai-tooltip" role="tooltip"><strong>AI 摘要</strong>${tooltipHtml(assisted.summary)}</span></span>` : ''}`;
+      const assistBadges = `${cachedAbstract ? `<span class="paper-ai-marker"><button type="button" class="paper-ai-badge paper-abstract-badge" data-preview="${p.pmid}" aria-label="查看已保存的摘要">摘要</button><span class="paper-ai-tooltip" role="tooltip"><strong>摘要</strong>${escapeHtml(cachedAbstract)}</span></span>` : ''}${assisted.translation ? `<span class="paper-ai-marker"><button type="button" class="paper-ai-badge paper-translation-badge" data-preview="${p.pmid}" aria-label="查看已保存的中文翻譯">譯</button><span class="paper-ai-tooltip" role="tooltip"><strong>中文翻譯</strong>${tooltipHtml(assisted.translation)}</span></span>` : ''}${assisted.summary ? `<span class="paper-ai-marker"><button type="button" class="paper-ai-badge paper-summary-badge" data-preview="${p.pmid}" aria-label="查看已保存的 AI 摘要">AI</button><span class="paper-ai-tooltip" role="tooltip"><strong>AI 摘要</strong>${tooltipHtml(assisted.summary)}</span></span>` : ''}`;
       return `<article class="paper-card${selected ? ' is-selected' : ''}">
         <div class="paper-index"><span class="paper-number">${String(state.page * PAGE_SIZE + index + 1).padStart(3, '0')}</span><input type="checkbox" class="paper-checkbox" aria-label="選取 ${escapeHtml(p.title)}" data-pmid="${p.pmid}" ${selected ? 'checked' : ''}></div>
         <div class="paper-main"><div class="paper-top"><div class="paper-pills">${assistBadges}${p.pmcid ? '<span class="pill pmc">PMC 收錄</span>' : ''}${articleType ? `<span class="pill type">${escapeHtml(articleType)}</span>` : ''}</div></div>
@@ -374,7 +375,7 @@ async function showAbstract(pmid) {
     const fetched = await getAbstracts([pmid]);
     if (generation !== workspaceGeneration) return;
     const text = fetched.get(pmid) || '';
-    state.abstractCache.set(pmid, text); abstractView.text = text; persistWorkspace();
+    state.abstractCache.set(pmid, text); abstractView.text = text; renderResults(); persistWorkspace();
     if ($('abstract-dialog').open && abstractView.pmid === pmid) renderAbstractView();
   } catch (error) { if ($('abstract-dialog').open) $('abstract-body').textContent = `無法讀取摘要：${error.message}`; }
 }
@@ -548,7 +549,7 @@ async function startExport(mode) {
     state.isExporting = false;
     state.exportAbort = null;
     $('select-page').disabled = !state.items.length;
-    updateBasket();
+    renderResults();
   }
 }
 
@@ -1001,6 +1002,7 @@ async function runAiAnalysis(question, { papers, query, config, controller, hide
     for (const p of group) state.abstractCache.set(p.pmid, abstracts.get(p.pmid) || '');
     persistWorkspace();
   }
+  if (missing.length) renderResults();
   const records = papers.map(p => ({ ...p, abstract: state.abstractCache.get(p.pmid) || '' }));
   const available = records.filter(p => p.abstract).length;
   const prompt = buildAnalysisPrompt({ query, papers: records, conversation: conversationContext(), question });
