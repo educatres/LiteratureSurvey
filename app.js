@@ -470,13 +470,6 @@ $('reset-filters').addEventListener('click', () => {
   if ($('query').value.trim()) manualSearch();
   else persistWorkspace();
 });
-$('toggle-filters').addEventListener('click', () => {
-  const content = $('filters-content');
-  const expanded = $('toggle-filters').getAttribute('aria-expanded') === 'true';
-  $('toggle-filters').setAttribute('aria-expanded', String(!expanded));
-  $('toggle-filters').setAttribute('aria-label', expanded ? '展開搜尋範圍' : '收折搜尋範圍');
-  content.hidden = expanded;
-});
 const topbarMenus = [...document.querySelectorAll('.topbar-right details')];
 for (const menu of topbarMenus) menu.addEventListener('toggle', () => {
   menu.querySelector('summary')?.setAttribute('aria-expanded', String(menu.open));
@@ -646,7 +639,7 @@ function renderRoundTabs() {
   for (const id of ['results-round-tabs', 'ai-round-tabs']) {
     const container = $(id); container.replaceChildren();
     for (const round of rounds) {
-      const tab = document.createElement('div'); tab.className = 'round-tab';
+      const tab = document.createElement('div'); tab.className = `round-tab${round.id === 0 ? ' initial-round' : ''}`;
       const select = document.createElement('button'); select.type = 'button'; select.className = 'round-tab-select';
       const label = document.createElement('span'); label.className = 'round-tab-label'; label.textContent = round.label; select.append(label); tab.append(select);
       let close = null;

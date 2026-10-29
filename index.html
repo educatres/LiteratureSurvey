@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#f7f8f5">
   <meta name="description" content="搜尋 PubMed、篩選與挑選文獻，批次下載摘要及可合法取得的開放取用全文。">
   <title>LiteratureSurvey — PubMed 文獻批次下載工作台</title>
-  <link rel="stylesheet" href="./styles.css?v=20261029-16">
-  <script type="module" src="./app.js?v=20261029-16"></script>
+  <link rel="stylesheet" href="./styles.css?v=20261029-17">
+  <script type="module" src="./app.js?v=20261029-17"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -33,7 +33,7 @@
       <div class="work-area">
         <div class="rounds-bar"><div class="storage-heading"><span class="section-overline">搜尋與對話紀錄</span></div><div id="results-round-tabs" class="round-tabs" aria-label="對話與搜尋紀錄"></div><p id="storage-status" class="storage-status" role="status" aria-live="polite" hidden></p></div>
         <aside class="filter-panel" aria-labelledby="filters-title">
-          <div class="panel-header"><div><span class="section-overline">01 / REFINE</span><h2 id="filters-title">縮小搜尋範圍</h2></div><div class="panel-actions"><button id="reset-filters" class="text-button" type="button">重設</button><button id="toggle-filters" class="collapse-button" type="button" aria-expanded="true" aria-controls="filters-content" aria-label="收折搜尋範圍">⌃</button></div></div>
+          <div class="panel-header"><div><h2 id="filters-title">縮小搜尋範圍</h2></div><div class="panel-actions"><button id="reset-filters" class="text-button" type="button">重設</button></div></div>
           <div id="filters-content" class="filters-content">
           <div class="field-group"><label class="field-label" for="year-from">出版年份</label><div class="year-range"><input id="year-from" type="number" min="1800" max="2100" placeholder="起始年份" inputmode="numeric"><span>—</span><input id="year-to" type="number" min="1800" max="2100" placeholder="結束年份" inputmode="numeric"></div></div>
           <div class="field-group"><label class="field-label" for="article-type">文章類型</label><select id="article-type"><option value="">所有類型</option><option value="review[pt]">Review（綜述）</option><option value="systematic review[pt]">Systematic Review</option><option value="meta-analysis[pt]">Meta-analysis</option><option value="clinical trial[pt]">Clinical Trial</option><option value="randomized controlled trial[pt]">Randomized Controlled Trial</option></select></div>
@@ -44,19 +44,19 @@
         </aside>
 
         <section class="results-panel" aria-labelledby="results-title">
-          <div class="results-topline"><div><span class="section-overline">02 / EXPLORE</span><h2 id="results-title">搜尋結果 <span class="result-count" id="result-count"></span></h2></div><div class="results-actions"><button type="button" id="select-page" class="subtle-button" disabled>全選此頁</button><button type="button" id="clear-selection" class="subtle-button" disabled>清空選取</button></div></div>
+          <div class="results-topline"><div><h2 id="results-title">搜尋結果 <span class="result-count" id="result-count"></span></h2></div><div class="results-actions"><button type="button" id="select-page" class="subtle-button" disabled>全選此頁</button><button type="button" id="clear-selection" class="subtle-button" disabled>清空選取</button></div></div>
           <div id="results-notice" class="results-notice" role="status" aria-live="polite">輸入搜尋條件後，即可查看 PubMed 文獻。</div>
           <div id="results-list" class="results-list" aria-live="polite"><div class="empty-state"><div class="empty-art" aria-hidden="true"><svg viewBox="0 0 120 110"><rect x="27" y="14" width="67" height="82" rx="8"/><path d="M42 35h36M42 47h36M42 59h22M42 71h28"/><circle cx="86" cy="76" r="20"/><path d="m100 90 13 13"/></svg></div><h3>從好問題開始</h3><p>輸入你的研究主題，這裡將顯示可篩選與挑選的文獻清單。</p></div></div>
           <div class="pagination" id="pagination" hidden><button type="button" id="prev-page" class="page-button">← 上一頁</button><span id="page-label"></span><button type="button" id="next-page" class="page-button">下一頁 →</button></div>
         </section>
 
-        <section class="ai-workspace" aria-labelledby="ai-title">
-        <div class="ai-heading"><div><span class="section-overline">AI RESEARCH ASSISTANT</span><h2 id="ai-title">AI 文獻探索</h2><p>整理已找到的摘要，或透過對話逐步釐清研究方向。</p></div></div>
+        <section class="ai-workspace" aria-label="AI RESEARCH ASSISTANT">
+        <div class="ai-heading"><div><span class="section-overline">AI RESEARCH ASSISTANT</span></div><div class="ai-heading-actions"><button type="button" id="ai-new" class="subtle-button">開始新對話</button><button type="button" id="ai-download" class="subtle-button" disabled>下載對話報告</button></div></div>
         <div class="ai-body">
           <div id="ai-round-tabs" class="round-tabs" aria-label="對話與搜尋紀錄"></div>
           <div class="ai-scope" id="ai-scope">尚無文獻：可先描述研究方向，AI 會協助擬定搜尋條件。</div>
-          <div class="ai-actions"><button type="button" id="ai-analyze" class="ai-primary">整理文獻並提出問題</button><button type="button" id="ai-new" class="subtle-button">開始新對話</button><button type="button" id="ai-download" class="subtle-button" disabled>下載對話報告</button><button type="button" id="ai-cancel" class="subtle-button" hidden>取消分析</button></div>
-          <div class="ai-examples" aria-label="對話範例"><p>試試這些問題</p><div><button type="button" id="ai-example-organize">整理我的文獻清單</button><button type="button" id="ai-example-compare">摘要與比較研究</button><button type="button" id="ai-example-extend">根據清單延伸搜尋</button></div><small>這些範例會分析「我的文獻清單」中已選取的文獻摘要。</small></div>
+          <button type="button" id="ai-cancel" class="subtle-button ai-cancel-button" hidden>取消分析</button>
+          <div class="ai-examples" aria-label="對話範例"><p>試試這些問題</p><div><button type="button" id="ai-analyze" class="ai-primary">整理文獻並提出問題</button><button type="button" id="ai-example-organize">整理我的文獻清單</button><button type="button" id="ai-example-compare">摘要與比較研究</button><button type="button" id="ai-example-extend">根據清單延伸搜尋</button></div><small>這些範例會分析「我的文獻清單」中已選取的文獻摘要。</small></div>
           <div id="ai-conversation" class="ai-conversation" aria-live="polite"><p class="ai-empty">選取文獻後開始整理，也可以直接輸入研究問題。</p></div>
           <form id="ai-form" class="ai-form"><label class="sr-only" for="ai-question">你的研究問題</label><textarea id="ai-question" rows="2" placeholder="例如：我想找成人第二型糖尿病患者的運動介入研究，該如何縮小範圍？"></textarea><button type="submit" class="ai-primary" id="ai-send">送出問題 →</button></form>
           <p class="ai-help">送出時會將研究問題、對話與所列文獻的標題和摘要傳給所選 AI 服務。搜尋建議會套用目前篩選條件，分析新搜尋結果的第一頁（最多 20 篇）。AI 可能出錯，請核對搜尋式、PMID 與原文。</p><p id="ai-status" class="ai-status" role="status" aria-live="polite"></p>
