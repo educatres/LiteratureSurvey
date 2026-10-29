@@ -615,6 +615,36 @@ $('results-list').addEventListener('click', event => {
   const button = event.target.closest('[data-preview]');
   if (button) showAbstract(button.dataset.preview);
 });
+function positionPaperAiTooltip(marker) {
+  const tooltip = marker?.querySelector('.paper-ai-tooltip');
+  const badge = marker?.querySelector('.paper-ai-badge');
+  if (!tooltip || !badge) return;
+  const margin = 12; const gap = 8;
+  const viewportWidth = document.documentElement.clientWidth;
+  const viewportHeight = document.documentElement.clientHeight;
+  const characterCount = tooltip.textContent.trim().length;
+  const preferredWidth = characterCount > 700 ? 560 : characterCount > 280 ? 480 : 360;
+  const width = Math.max(1, Math.min(preferredWidth, viewportWidth - margin * 2));
+  tooltip.style.width = `${width}px`; tooltip.style.maxHeight = 'none'; tooltip.style.overflowY = 'hidden';
+  const badgeRect = badge.getBoundingClientRect();
+  const naturalHeight = tooltip.scrollHeight;
+  const availableAbove = badgeRect.top - margin - gap;
+  const availableBelow = viewportHeight - badgeRect.bottom - margin - gap;
+  const placeBelow = naturalHeight > availableAbove && availableBelow > availableAbove;
+  const availableHeight = Math.max(1, Math.min(viewportHeight - margin * 2, placeBelow ? availableBelow : availableAbove));
+  const height = Math.min(naturalHeight, availableHeight);
+  const left = Math.max(margin, Math.min(badgeRect.right - width, viewportWidth - width - margin));
+  const idealTop = placeBelow ? badgeRect.bottom + gap : badgeRect.top - gap - height;
+  const top = Math.max(margin, Math.min(idealTop, viewportHeight - height - margin));
+  tooltip.style.left = `${left}px`; tooltip.style.top = `${top}px`; tooltip.style.maxHeight = `${availableHeight}px`;
+  tooltip.style.overflowY = naturalHeight > availableHeight ? 'auto' : 'visible';
+  tooltip.classList.toggle('is-positioned', true);
+}
+$('results-list').addEventListener('pointerover', event => {
+  const marker = event.target.closest?.('.paper-ai-marker');
+  if (marker && !marker.contains(event.relatedTarget)) positionPaperAiTooltip(marker);
+});
+$('results-list').addEventListener('focusin', event => positionPaperAiTooltip(event.target.closest?.('.paper-ai-marker')));
 $('basket-items').addEventListener('click', event => {
   const button = event.target.closest('[data-remove]');
   if (button) togglePaper(button.dataset.remove, false);
