@@ -3,7 +3,7 @@ import { renderMarkdown } from './markdown.mjs';
 import { encodeWorkspace, decodeWorkspace, encodeProjectIndex, decodeProjectIndex } from './workspace.mjs';
 import { encodeProjectBackup, decodeProjectBackup, storeImportedProject, PROJECT_INDEX_STORAGE, PROJECT_WORKSPACE_PREFIX } from './project-backup.mjs';
 import { PAGE_SIZE, MAX_EXPORT, buildPubmedQuery, sortPapers, normalizeSummary, metadataCsv, fileStem, chunks } from './domain.mjs';
-import { PROVIDERS, listModels, generateText, buildAnalysisPrompt, extractSearchSuggestion } from './ai.mjs?v=20261030-5';
+import { PROVIDERS, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion } from './ai.mjs?v=20261030-6';
 
 const NCBI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
 const EPMC = 'https://www.ebi.ac.uk/europepmc/webservices/rest';
@@ -1361,8 +1361,13 @@ $('ai-test').addEventListener('click', async () => {
     const models = await listModels(provider, key, controller.signal);
     if (controller.signal.aborted || $('ai-provider').value !== provider || $('ai-key').value.trim() !== key) return;
     $('ai-model-list').replaceChildren(new Option('選擇模型', ''), ...models.map(item => new Option(item.label === item.id ? item.id : `${item.label}（${item.id}）`, item.id)));
+    let autoSelected = false;
     if (models.some(item => item.id === model)) $('ai-model-list').value = model;
-    aiSettingsMessage(models.length ? `連線成功，取得 ${models.length} 個模型。請選擇支援文字生成的模型並儲存設定。` : '連線成功，但沒有可列舉的模型；可手動輸入模型 ID。');
+    else {
+      const preferred = preferredModel(provider, models);
+      if (preferred) { $('ai-model-list').value = preferred; $('ai-model').value = preferred; autoSelected = true; }
+    }
+    aiSettingsMessage(models.length ? `連線成功，取得 ${models.length} 個模型。${autoSelected ? '已優先選取建議模型；' : ''}請確認後儲存設定。` : '連線成功，但沒有可列舉的模型；可手動輸入模型 ID。');
   } catch (error) { if (error.name !== 'AbortError') aiSettingsMessage(`連線失敗：${error.message}`, true); }
   finally { aiTestAbort = null; $('ai-test').disabled = false; }
 });

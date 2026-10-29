@@ -1,6 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { listModels, generateText, buildAnalysisPrompt, extractSearchSuggestion } from '../ai.mjs';
+import { listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion } from '../ai.mjs';
+
+test('preferred models choose the newest Luna or Flash Lite variant', () => {
+  const models = [
+    { id: 'luna-2.5-8b', label: 'Luna 2.5' },
+    { id: 'luna-3.1-8b', label: 'Luna 3.1' },
+    { id: 'gemini-2.5-flash-lite-preview-09-2025', label: 'Gemini 2.5 Flash Lite Preview' },
+    { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
+    { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite' }
+  ];
+  assert.equal(preferredModel('cgu', models), 'luna-3.1-8b');
+  assert.equal(preferredModel('google', models), 'gemini-2.5-flash-lite');
+});
 
 test('Google models are paginated, filtered for text generation, and authenticated via headers', async t => {
   const original = globalThis.fetch;

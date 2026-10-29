@@ -42,6 +42,28 @@ export async function listModels(provider, key, signal) {
   return [...new Map(models.map(model => [model.id, model])).values()];
 }
 
+function modelVersion(model) {
+  const text = `${model.id || ''} ${model.label || ''}`;
+  const family = text.match(/(?:luna|gemini)[-_ ]?(\d+)(?:[._-](\d+))?/i);
+  const version = family ? [Number(family[1]), Number(family[2] || 0)] : [0, 0];
+  const date = text.match(/(?:^|[-_])((?:20|19)\d{2})[-_]?([01]\d)[-_]?([0-3]\d)(?:$|[-_])/);
+  return { version, date: date ? date.slice(1).map(Number) : [0, 0, 0], stable: !/(?:preview|experimental|exp|alpha|beta)/i.test(text) };
+}
+
+export function preferredModel(provider, models) {
+  const pattern = provider === 'cgu' ? /luna/i : provider === 'google' ? /flash[- ]?lite/i : null;
+  if (!pattern) return '';
+  return models
+    .map((model, index) => ({ model, index, ranking: modelVersion(model) }))
+    .filter(item => pattern.test(`${item.model.id || ''} ${item.model.label || ''}`))
+    .sort((a, b) => {
+      for (const index of [0, 1]) if (a.ranking.version[index] !== b.ranking.version[index]) return b.ranking.version[index] - a.ranking.version[index];
+      if (a.ranking.stable !== b.ranking.stable) return Number(b.ranking.stable) - Number(a.ranking.stable);
+      for (const index of [0, 1, 2]) if (a.ranking.date[index] !== b.ranking.date[index]) return b.ranking.date[index] - a.ranking.date[index];
+      return a.index - b.index;
+    })[0]?.model.id || '';
+}
+
 export async function generateText({ provider, key, model, prompt, signal }) {
   const service = PROVIDERS[provider];
   if (!service || !key.trim() || !model.trim()) throw new Error('請先設定 API Key 並選擇或輸入模型。');

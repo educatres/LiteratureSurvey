@@ -11,7 +11,7 @@
 - 將摘要 TXT、`metadata.csv` 和結果報告打包為 ZIP。
 - 僅將 **PMC Open Access Subset** 內、且 Europe PMC 官方全文 API 可取得的全文 XML 打包為 ZIP；無全文的項目會記錄在報告中，不會嘗試規避付費牆。
 - 使用者可選填自己的 **NCBI API Key** 與聯絡 Email；NCBI Key 僅存在頁面工作階段，不會寫入 localStorage、cookie、網址導覽或程式庫。
-- 可選擇 CGU、OpenAI、Grok（xAI）或 Google AI Studio，使用「收藏的文獻清單」摘要進行 AI 整理與多輪探索，或取消摘要參考後先請 AI 協助擬定搜尋條件。可下載對話報告。
+- 可選擇 CGU、OpenAI、Grok（xAI）或 Google AI Studio，使用「收藏的文獻清單」摘要進行 AI 整理與多輪探索，或取消摘要參考後先請 AI 協助擬定搜尋條件。讀取模型後，CGU 會優先選取最新 Luna，Google AI Studio 會優先選取最新 Flash Lite；可再手動改選。可下載對話報告。
 - AI 助理可勾選是否使用「收藏的文獻清單」摘要；取消勾選時只根據多輪對話蒐集研究條件，資訊足夠後產生 PubMed 搜尋式。
 - 開啟網站後先選擇或建立專案；每個專案各自保存搜尋及對話分頁、已瀏覽的搜尋結果、文獻清單、摘要與輸入草稿，資料保存在本瀏覽器的 localStorage，重新整理後恢復。
 - 可在專案選擇頁匯入或匯出專案 JSON 備份；匯入會建立新的專案，不會覆蓋現有專案。
