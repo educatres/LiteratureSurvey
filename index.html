@@ -7,7 +7,7 @@
   <meta name="description" content="搜尋 PubMed、篩選與挑選文獻，批次下載摘要及可合法取得的開放取用全文。">
   <title>LitFetch — PubMed 文獻批次下載工作台</title>
   <link rel="stylesheet" href="./styles.css">
-  <script type="module" src="./app.js?v=20261029-3"></script>
+  <script type="module" src="./app.js?v=20261029-5"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -33,15 +33,6 @@
         <div class="search-examples"><span>試試搜尋</span><button type="button" class="example-query" data-query="CRISPR AND gene therapy">CRISPR + gene therapy ↗</button><button type="button" class="example-query" data-query="(type 2 diabetes) AND exercise">Diabetes + exercise ↗</button><button type="button" class="example-query" data-query="AI AND radiology">AI + radiology ↗</button></div>
       </section>
 
-      <section class="ai-workspace" aria-labelledby="ai-title">
-        <div class="ai-heading"><div><span class="section-overline">AI RESEARCH ASSISTANT</span><h2 id="ai-title">AI 文獻探索</h2><p>整理已找到的摘要，或透過對話逐步釐清研究方向。</p></div><button type="button" id="ai-settings-toggle" class="subtle-button" aria-expanded="false" aria-controls="ai-settings">⚙ 連接你的 AI</button></div>
-        <div id="ai-settings" class="ai-settings" hidden>
-          <div class="ai-settings-grid"><label>AI 服務<select id="ai-provider"><option value="cgu">CGU</option><option value="openai">OpenAI</option><option value="xai">Grok（xAI）</option><option value="google">Google AI Studio</option></select></label><label>API Key<input id="ai-key" type="password" autocomplete="off" spellcheck="false" placeholder="貼上此服務的 API Key"></label><label>選擇模型<select id="ai-model-list"><option value="">請先讀取模型</option></select></label><label>或手動輸入模型 ID<input id="ai-model" type="text" autocomplete="off" placeholder="選擇模型或輸入模型 ID"></label></div>
-          <div class="ai-actions"><button type="button" id="ai-save" class="subtle-button">儲存設定</button><button type="button" id="ai-test" class="subtle-button">測試連線並讀取模型</button><button type="button" id="ai-clear" class="subtle-button">清除此服務的 Key</button></div>
-          <p class="ai-help">Key 儲存在這個瀏覽器的 localStorage，未加密；同一瀏覽器的其他使用者、擴充功能或網站程式可能讀取。請勿在共用電腦使用，並可隨時手動清除。連線與分析會直接傳送至所選服務，可能產生費用；部分服務可能限制瀏覽器連線。</p><p id="ai-settings-status" class="ai-status" role="status" aria-live="polite"></p>
-        </div>
-        <div class="ai-body"><div class="ai-scope" id="ai-scope">尚無文獻：可先描述研究方向，AI 會協助擬定搜尋條件。</div><div class="ai-actions"><button type="button" id="ai-analyze" class="ai-primary">整理文獻並提出問題</button><button type="button" id="ai-new" class="subtle-button">開始新對話</button><button type="button" id="ai-download" class="subtle-button" disabled>下載對話報告</button><button type="button" id="ai-cancel" class="subtle-button" hidden>取消分析</button></div><div id="ai-conversation" class="ai-conversation" aria-live="polite"><p class="ai-empty">選取文獻後開始整理，也可以直接輸入研究問題。</p></div><form id="ai-form" class="ai-form"><label class="sr-only" for="ai-question">你的研究問題</label><textarea id="ai-question" rows="2" placeholder="例如：我想找成人第二型糖尿病患者的運動介入研究，該如何縮小範圍？"></textarea><button type="submit" class="ai-primary" id="ai-send">送出問題 →</button></form><p class="ai-help">送出時會將研究問題、對話與所列文獻的標題和摘要傳給所選 AI 服務。AI 可能出錯，請核對 PMID 與原文。</p><p id="ai-status" class="ai-status" role="status" aria-live="polite"></p></div>
-      </section>
       <div class="work-area">
         <aside class="filter-panel" aria-labelledby="filters-title">
           <div class="panel-header"><div><span class="section-overline">01 / REFINE</span><h2 id="filters-title">縮小搜尋範圍</h2></div><button id="reset-filters" class="text-button" type="button">重設</button></div>
@@ -56,12 +47,22 @@
 
         <section class="results-panel" aria-labelledby="results-title">
           <div class="results-topline"><div><span class="section-overline">02 / EXPLORE</span><h2 id="results-title">搜尋結果 <span class="result-count" id="result-count"></span></h2></div><div class="results-actions"><button type="button" id="select-page" class="subtle-button" disabled>全選此頁</button><button type="button" id="clear-selection" class="subtle-button" disabled>清空選取</button></div></div>
+          <div id="results-round-tabs" class="round-tabs" aria-label="對話與搜尋紀錄"></div>
           <div id="results-notice" class="results-notice" role="status" aria-live="polite">輸入搜尋條件後，即可查看 PubMed 文獻。</div>
           <div id="results-list" class="results-list" aria-live="polite"><div class="empty-state"><div class="empty-art" aria-hidden="true"><svg viewBox="0 0 120 110"><rect x="27" y="14" width="67" height="82" rx="8"/><path d="M42 35h36M42 47h36M42 59h22M42 71h28"/><circle cx="86" cy="76" r="20"/><path d="m100 90 13 13"/></svg></div><h3>從好問題開始</h3><p>輸入你的研究主題，這裡將顯示可篩選與挑選的文獻清單。</p></div></div>
           <div class="pagination" id="pagination" hidden><button type="button" id="prev-page" class="page-button">← 上一頁</button><span id="page-label"></span><button type="button" id="next-page" class="page-button">下一頁 →</button></div>
         </section>
 
         <aside class="basket-panel" aria-labelledby="basket-title"><div class="basket-heading"><span class="section-overline">03 / COLLECT</span><h2 id="basket-title">我的文獻清單 <span class="basket-count" id="basket-count">0</span></h2><p>跨頁勾選，最後一次匯出。</p></div><div id="basket-items" class="basket-items"><p class="basket-empty">尚未選取文獻。<br>點選搜尋結果旁的方框加入清單。</p></div><div class="basket-footer"><div class="basket-summary"><span>已選文獻</span><strong id="selected-count">0 篇</strong></div><button type="button" id="download-abstracts" class="download-button" disabled><span>↓</span> 下載摘要 ZIP</button><button type="button" id="download-fulltext" class="download-outline" disabled><span>↓</span> 下載開放全文 XML ZIP</button><a id="retry-download" class="retry-download" hidden>若沒有自動下載，點此取得 ZIP ↗</a><p class="download-note">每次最多 100 篇；摘要匯出包含文獻資訊 CSV。僅 PMC 開放取用子集可批次下載全文。</p></div></aside>
+        <section class="ai-workspace" aria-labelledby="ai-title">
+        <div class="ai-heading"><div><span class="section-overline">AI RESEARCH ASSISTANT</span><h2 id="ai-title">AI 文獻探索</h2><p>整理已找到的摘要，或透過對話逐步釐清研究方向。</p></div><button type="button" id="ai-settings-toggle" class="subtle-button" aria-expanded="false" aria-controls="ai-settings">⚙ 連接你的 AI</button></div>
+        <div id="ai-settings" class="ai-settings" hidden>
+          <div class="ai-settings-grid"><label>AI 服務<select id="ai-provider"><option value="cgu">CGU</option><option value="openai">OpenAI</option><option value="xai">Grok（xAI）</option><option value="google">Google AI Studio</option></select></label><label>API Key<input id="ai-key" type="password" autocomplete="off" spellcheck="false" placeholder="貼上此服務的 API Key"></label><label>選擇模型<select id="ai-model-list"><option value="">請先讀取模型</option></select></label><label>或手動輸入模型 ID<input id="ai-model" type="text" autocomplete="off" placeholder="選擇模型或輸入模型 ID"></label></div>
+          <div class="ai-actions"><button type="button" id="ai-save" class="subtle-button">儲存設定</button><button type="button" id="ai-test" class="subtle-button">測試連線並讀取模型</button><button type="button" id="ai-clear" class="subtle-button">清除此服務的 Key</button></div>
+          <p class="ai-help">Key 儲存在這個瀏覽器的 localStorage，未加密；同一瀏覽器的其他使用者、擴充功能或網站程式可能讀取。請勿在共用電腦使用，並可隨時手動清除。連線與分析會直接傳送至所選服務，可能產生費用；部分服務可能限制瀏覽器連線。</p><p id="ai-settings-status" class="ai-status" role="status" aria-live="polite"></p>
+        </div>
+        <div class="ai-body"><div id="ai-round-tabs" class="round-tabs" aria-label="對話與搜尋紀錄"></div><div class="ai-scope" id="ai-scope">尚無文獻：可先描述研究方向，AI 會協助擬定搜尋條件。</div><div class="ai-actions"><button type="button" id="ai-analyze" class="ai-primary">整理文獻並提出問題</button><button type="button" id="ai-new" class="subtle-button">開始新對話</button><button type="button" id="ai-download" class="subtle-button" disabled>下載對話報告</button><button type="button" id="ai-cancel" class="subtle-button" hidden>取消分析</button></div><div id="ai-conversation" class="ai-conversation" aria-live="polite"><p class="ai-empty">選取文獻後開始整理，也可以直接輸入研究問題。</p></div><form id="ai-form" class="ai-form"><label class="sr-only" for="ai-question">你的研究問題</label><textarea id="ai-question" rows="2" placeholder="例如：我想找成人第二型糖尿病患者的運動介入研究，該如何縮小範圍？"></textarea><button type="submit" class="ai-primary" id="ai-send">送出問題 →</button></form><p class="ai-help">送出時會將研究問題、對話與所列文獻的標題和摘要傳給所選 AI 服務。搜尋建議會套用目前篩選條件，分析新搜尋結果的第一頁（最多 20 篇）。AI 可能出錯，請核對搜尋式、PMID 與原文。</p><p id="ai-status" class="ai-status" role="status" aria-live="polite"></p></div>
+      </section>
       </div>
     </main>
 

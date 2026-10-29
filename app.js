@@ -1,6 +1,6 @@
 import { makeZip } from './zip.mjs';
 import { PAGE_SIZE, MAX_EXPORT, buildPubmedQuery, normalizeSummary, metadataCsv, fileStem, chunks } from './domain.mjs';
-import { PROVIDERS, listModels, generateText, buildAnalysisPrompt } from './ai.mjs';
+import { PROVIDERS, listModels, generateText, buildAnalysisPrompt, extractSearchSuggestion } from './ai.mjs?v=20261029-4';
 
 const NCBI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
 const EPMC = 'https://www.ebi.ac.uk/europepmc/webservices/rest';
@@ -12,6 +12,9 @@ const state = {
   isSearching: false, isExporting: false, lastNcbiRequestAt: 0,
   searchSource: 'ncbi', epmcCursors: new Map([[0, '*']])
 };
+const rounds = [{ id: 0, label: '初始對話', parent: null, snapshot: null }];
+let activeRoundId = 0;
+let nextRoundId = 1;
 let ncbiQueue = Promise.resolve();
 
 function escapeHtml(s) {
@@ -136,12 +139,18 @@ function normalizeEuropePmc(r) {
   };
 }
 
-async function performSearch(resetPage = true) {
+async function performSearch(resetPage = true, externalSignal) {
   let query;
-  try { query = buildPubmedQuery($('query').value, currentFilters()); }
-  catch (error) { status(error.message, true); $('query').focus(); return; }
+  const baseQuery = $('query').value.trim();
+  const filters = currentFilters();
+  const sort = $('sort-by').value;
+  try { query = buildPubmedQuery(baseQuery, filters); }
+  catch (error) { status(error.message, true); $('query').focus(); if (externalSignal) throw error; return; }
+  if (externalSignal?.aborted) throw abortError();
   if (state.searchAbort) state.searchAbort.abort();
   const controller = new AbortController();
+  const cancelSearch = () => controller.abort();
+  externalSignal?.addEventListener('abort', cancelSearch, { once: true });
   state.searchAbort = controller;
   if (resetPage || query !== state.lastQuery) {
     state.page = 0;
@@ -159,14 +168,14 @@ async function performSearch(resetPage = true) {
     let papers;
     let source = 'ncbi';
     try {
-      response = await searchIds(query, state.page * PAGE_SIZE, PAGE_SIZE, $('sort-by').value, controller.signal);
+      response = await searchIds(query, state.page * PAGE_SIZE, PAGE_SIZE, sort, controller.signal);
       papers = await getSummaries(response.ids, controller.signal);
     } catch (primaryError) {
       if (controller.signal.aborted || primaryError.name === 'AbortError') throw primaryError;
       try {
         const cursorMark = state.epmcCursors.get(state.page);
         if (!cursorMark) throw new Error('無法取得此頁的備援搜尋游標，請重新搜尋。');
-        const fallback = await europePmcSearch(europePmcQuery($('query').value.trim(), { ...currentFilters(), sort: $('sort-by').value }), controller.signal, { cursorMark });
+        const fallback = await europePmcSearch(europePmcQuery(baseQuery, { ...filters, sort }), controller.signal, { cursorMark });
         if (fallback.nextCursorMark) state.epmcCursors.set(state.page + 1, fallback.nextCursorMark);
         response = { total: fallback.hitCount || 0 };
         papers = fallback.resultList.result.map(normalizeEuropePmc).filter(Boolean);
@@ -176,19 +185,23 @@ async function performSearch(resetPage = true) {
         throw new Error(`NCBI 與 Europe PMC 都無法連線（${fallbackError.message}）。可能是瀏覽器擴充功能、網路防火牆或跨站連線限制；請嘗試其他瀏覽器或網路。`);
       }
     }
-    if (controller.signal.aborted) return;
+    if (controller.signal.aborted) throw abortError();
     state.total = response.total;
     state.items = papers;
     state.searchSource = source;
     for (const p of papers) if (typeof p.abstract === 'string') state.abstractCache.set(p.pmid, p.abstract);
     renderResults();
     status(`顯示第 ${response.total ? state.page * PAGE_SIZE + 1 : 0}–${Math.min((state.page + 1) * PAGE_SIZE, response.total)} 篇；可跨頁挑選文獻。${source === 'europepmc' ? '目前使用 Europe PMC 備援搜尋（PubMed 收錄文獻）；進階 PubMed 語法可能有差異。' : ''}`);
+    return { papers: [...papers], total: response.total, query, source, baseQuery, filters, sort };
   } catch (error) {
+    if (externalSignal && (error.name === 'AbortError' || controller.signal.aborted)) throw abortError();
     if (error.name !== 'AbortError' && !controller.signal.aborted) {
       $('results-list').innerHTML = '<div class="empty-state"><h3>搜尋失敗</h3><p>請稍後再試，或調整 PubMed 查詢條件。</p></div>';
       status(error.message || '無法連接 PubMed。', true);
     }
+    if (externalSignal) throw error;
   } finally {
+    externalSignal?.removeEventListener('abort', cancelSearch);
     if (state.searchAbort === controller) {
       state.isSearching = false;
       state.searchAbort = null;
@@ -442,16 +455,16 @@ async function startExport(mode) {
   }
 }
 
-$('search-form').addEventListener('submit', event => { event.preventDefault(); performSearch(true); });
-$('apply-filters').addEventListener('click', () => performSearch(true));
+$('search-form').addEventListener('submit', event => { event.preventDefault(); manualSearch(); });
+$('apply-filters').addEventListener('click', () => manualSearch());
 $('reset-filters').addEventListener('click', () => {
   $('year-from').value = ''; $('year-to').value = ''; $('article-type').value = '';
   $('sort-by').value = 'relevance'; $('open-access').checked = false;
-  if ($('query').value.trim()) performSearch(true);
+  if ($('query').value.trim()) manualSearch();
 });
 document.querySelectorAll('.example-query').forEach(button => button.addEventListener('click', () => {
   $('query').value = button.dataset.query;
-  performSearch(true);
+  manualSearch();
 }));
 $('results-list').addEventListener('change', event => {
   if (event.target.matches('.paper-checkbox')) togglePaper(event.target.dataset.pmid, event.target.checked);
@@ -469,8 +482,8 @@ $('select-page').addEventListener('click', () => {
   for (const p of state.items) togglePaper(p.pmid, !allSelected);
 });
 $('clear-selection').addEventListener('click', () => { state.selected.clear(); renderResults(); });
-$('prev-page').addEventListener('click', () => { if (state.page > 0) { state.page--; performSearch(false); } });
-$('next-page').addEventListener('click', () => { if ((state.page + 1) * PAGE_SIZE < state.total) { state.page++; performSearch(false); } });
+$('prev-page').addEventListener('click', () => { if (state.page > 0) changeResultPage(state.page - 1); });
+$('next-page').addEventListener('click', () => { if ((state.page + 1) * PAGE_SIZE < state.total) changeResultPage(state.page + 1); });
 $('download-abstracts').addEventListener('click', () => startExport('abstracts'));
 $('download-fulltext').addEventListener('click', () => startExport('fulltext'));
 $('cancel-download').addEventListener('click', () => state.exportAbort?.abort());
@@ -487,6 +500,78 @@ try {
 let aiConversation = [];
 let aiAbort = null;
 let aiTestAbort = null;
+
+function activeRound() { return rounds.find(round => round.id === activeRoundId); }
+function saveRoundResults(round, result) {
+  round.snapshot = { baseQuery: result.baseQuery, filters: { ...result.filters }, sort: result.sort,
+    query: result.query, page: state.page, total: state.total, items: [...state.items],
+    source: state.searchSource, cursors: new Map(state.epmcCursors) };
+}
+function restoreRound(round) {
+  const snapshot = round.snapshot;
+  if (snapshot) {
+    $('query').value = snapshot.baseQuery;
+    $('year-from').value = snapshot.filters.from; $('year-to').value = snapshot.filters.to;
+    $('article-type').value = snapshot.filters.articleType; $('open-access').checked = snapshot.filters.openAccess;
+    $('sort-by').value = snapshot.sort;
+    state.page = snapshot.page; state.total = snapshot.total; state.items = [...snapshot.items];
+    state.lastQuery = snapshot.query; state.searchSource = snapshot.source; state.epmcCursors = new Map(snapshot.cursors);
+    renderResults();
+    status(`${round.label}：顯示第 ${snapshot.total ? snapshot.page * PAGE_SIZE + 1 : 0}–${Math.min((snapshot.page + 1) * PAGE_SIZE, snapshot.total)} 篇。${snapshot.source === 'europepmc' ? '目前使用 Europe PMC 備援搜尋。' : ''}`);
+  } else {
+    $('query').value = '';
+    state.page = 0; state.total = 0; state.items = []; state.lastQuery = '';
+    state.epmcCursors = new Map([[0, '*']]);
+    renderResults();
+    status(`${round.label}尚未搜尋文獻。`);
+  }
+}
+function roundContext(round) {
+  const lineage = [];
+  for (let node = round; node; node = rounds.find(item => item.id === node.parent)) lineage.unshift(node.id);
+  return aiConversation.filter(message => lineage.includes(message.roundId)).map(({ role, content, searchQuery }) => ({ role, content, ...(searchQuery ? { searchQuery } : {}) }));
+}
+function addRound(label, parent = activeRoundId) {
+  const round = { id: nextRoundId++, label, parent, snapshot: null };
+  rounds.push(round); activeRoundId = round.id;
+  return round;
+}
+function renderRoundTabs() {
+  for (const id of ['results-round-tabs', 'ai-round-tabs']) {
+    const container = $(id); container.replaceChildren();
+    for (const round of rounds) {
+      const button = document.createElement('button'); button.type = 'button'; button.className = 'round-tab';
+      button.textContent = round.label; button.setAttribute('aria-pressed', String(round.id === activeRoundId));
+      button.disabled = Boolean(aiAbort || state.isSearching);
+      button.addEventListener('click', () => {
+        if (aiAbort || state.isSearching || round.id === activeRoundId) return;
+        activeRoundId = round.id; restoreRound(round); renderRoundTabs(); renderAiConversation(); aiMessage('');
+      });
+      container.append(button);
+    }
+  }
+}
+async function manualSearch() {
+  if (aiAbort || state.isSearching) return;
+  const previous = activeRound();
+  const pending = performSearch(true); renderRoundTabs();
+  const result = await pending;
+  if (result) {
+    const round = previous.snapshot ? addRound(`搜尋 ${nextRoundId}`) : previous;
+    saveRoundResults(round, result); renderRoundTabs(); renderAiConversation(); updateAiScope();
+  } else if (previous.snapshot) { const notice = $('results-notice').textContent; restoreRound(previous); status(notice, true); renderRoundTabs(); }
+  else renderRoundTabs();
+}
+async function changeResultPage(page) {
+  if (aiAbort || state.isSearching || !activeRound().snapshot) return;
+  const round = activeRound();
+  restoreRound(round); state.page = page;
+  const pending = performSearch(false); renderRoundTabs();
+  const result = await pending;
+  if (result) saveRoundResults(round, result);
+  else { const notice = $('results-notice').textContent; restoreRound(round); status(notice, true); }
+  renderRoundTabs();
+}
 
 function aiMessage(message, error = false) {
   $('ai-status').textContent = message;
@@ -511,60 +596,108 @@ function loadAiProvider() {
   aiSettingsMessage('');
 }
 function updateAiScope() {
-  const count = state.selected.size || state.items.length;
-  $('ai-scope').textContent = count ? `分析範圍：${state.selected.size ? '已選取文獻' : '目前搜尋結果這一頁'} ${count} 篇；送出前會取得可用摘要。` : '尚無文獻：可先描述研究方向，AI 會協助擬定搜尋條件。';
+  const useSelected = !activeRound().fromAiSearch && state.selected.size > 0;
+  const count = useSelected ? state.selected.size : state.items.length;
+  $('ai-scope').textContent = count ? `分析範圍：${useSelected ? '已選取文獻' : '目前分頁的搜尋結果這一頁'} ${count} 篇；送出前會取得可用摘要。` : '尚無文獻：可先描述研究方向，AI 會協助擬定搜尋條件。';
 }
 function renderAiConversation() {
   const container = $('ai-conversation');
   container.replaceChildren();
-  if (!aiConversation.length) {
+  const messages = aiConversation.filter(message => message.roundId === activeRoundId);
+  if (!messages.length) {
     const empty = document.createElement('p'); empty.className = 'ai-empty'; empty.textContent = '選取文獻後開始整理，也可以直接輸入研究問題。'; container.append(empty);
   }
-  for (const message of aiConversation) {
+  for (const message of messages) {
     const item = document.createElement('div'); item.className = `ai-message ${message.role === 'user' ? 'ai-user' : 'ai-assistant'}`;
     const label = document.createElement('strong'); label.textContent = message.role === 'user' ? '你的問題' : 'AI 研究助理';
     const body = document.createElement('div'); body.textContent = message.content;
-    item.append(label, body); container.append(item);
+    item.append(label, body);
+    if (message.role === 'assistant' && message.searchQuery) {
+      const suggestion = document.createElement('div'); suggestion.className = 'ai-suggestion';
+      const hint = document.createElement('label'); hint.textContent = '建議的 PubMed 搜尋式（可修改）';
+      const input = document.createElement('textarea'); input.rows = 3; input.value = message.searchQuery; input.maxLength = 1500; input.setAttribute('aria-label', '建議的 PubMed 搜尋式');
+      const button = document.createElement('button'); button.type = 'button'; button.className = 'ai-primary ai-search-button'; button.textContent = '搜尋 PubMed 並分析摘要 →'; button.disabled = Boolean(aiAbort);
+      button.addEventListener('click', () => searchAndAnalyze(input.value));
+      suggestion.append(hint, input, button); item.append(suggestion);
+    }
+    container.append(item);
   }
   $('ai-download').disabled = !aiConversation.some(message => message.role === 'assistant');
 }
 function setAiBusy(busy) {
   for (const id of ['ai-analyze', 'ai-send', 'ai-new', 'ai-settings-toggle']) $(id).disabled = busy;
   $('ai-cancel').hidden = !busy;
+  document.querySelectorAll('.ai-search-button').forEach(button => { button.disabled = busy; });
+  renderRoundTabs();
 }
-async function askAi(question) {
-  if (aiAbort) return;
+function requireAiConfig() {
   const config = currentAiConfig();
-  if (!config.key || !config.model) { aiMessage('請先開啟「連接你的 AI」，輸入 API Key 並選擇或輸入模型。', true); $('ai-settings').hidden = false; $('ai-settings-toggle').setAttribute('aria-expanded', 'true'); return; }
-  const papers = [...(state.selected.size ? state.selected.values() : state.items)];
-  const query = state.lastQuery;
+  if (!config.key || !config.model) { aiMessage('請先開啟「連接你的 AI」，輸入 API Key 並選擇或輸入模型。', true); $('ai-settings').hidden = false; $('ai-settings-toggle').setAttribute('aria-expanded', 'true'); return null; }
+  return config;
+}
+async function runAiAnalysis(question, { papers, query, config, controller }) {
+  aiMessage(`正在取得 ${papers.length} 篇文獻的摘要…`);
+  const missing = papers.filter(p => !state.abstractCache.has(p.pmid));
+  for (const group of chunks(missing, 40)) {
+    const abstracts = await getAbstracts(group.map(p => p.pmid), controller.signal);
+    if (controller.signal.aborted) throw abortError();
+    for (const p of group) state.abstractCache.set(p.pmid, abstracts.get(p.pmid) || '');
+  }
+  const records = papers.map(p => ({ ...p, abstract: state.abstractCache.get(p.pmid) || '' }));
+  const available = records.filter(p => p.abstract).length;
+  const prompt = buildAnalysisPrompt({ query, papers: records, conversation: roundContext(activeRound()), question });
+  if (prompt.length > 240000) throw new Error('文獻摘要與對話過長，請減少選取篇數或開始新對話。');
+  if (controller.signal.aborted) throw abortError();
+  aiMessage(`已取得 ${available}/${papers.length} 篇摘要，正在傳送給 ${PROVIDERS[config.provider].label} 分析…`);
+  const answer = await generateText({ ...config, prompt, signal: controller.signal });
+  if (controller.signal.aborted) throw abortError();
+  const suggestion = extractSearchSuggestion(answer);
+  aiConversation.push({ role: 'user', content: question, roundId: activeRoundId }, { role: 'assistant', content: suggestion.text, searchQuery: suggestion.query, roundId: activeRoundId });
+  renderAiConversation();
+  aiMessage(`分析完成：使用 ${papers.length} 篇文獻，其中 ${available} 篇有摘要。請核對原文。`);
+  $('ai-question').value = '';
+}
+async function withAiTask(work) {
+  if (aiAbort) return;
+  const config = requireAiConfig();
+  if (!config) return;
   const controller = new AbortController(); aiAbort = controller; setAiBusy(true);
   try {
-    aiMessage(`正在取得 ${papers.length} 篇文獻的摘要…`);
-    const missing = papers.filter(p => !state.abstractCache.has(p.pmid));
-    for (const group of chunks(missing, 40)) {
-      const abstracts = await getAbstracts(group.map(p => p.pmid), controller.signal);
-      for (const p of group) state.abstractCache.set(p.pmid, abstracts.get(p.pmid) || '');
-    }
-    const records = papers.map(p => ({ ...p, abstract: state.abstractCache.get(p.pmid) || '' }));
-    const available = records.filter(p => p.abstract).length;
-    const prompt = buildAnalysisPrompt({ query, papers: records, conversation: aiConversation, question });
-    if (prompt.length > 240000) throw new Error('文獻摘要與對話過長，請減少選取篇數或開始新對話。');
-    aiMessage(`已取得 ${available}/${papers.length} 篇摘要，正在傳送給 ${PROVIDERS[config.provider].label} 分析…`);
-    const answer = await generateText({ ...config, prompt, signal: controller.signal });
-    if (controller.signal.aborted) return;
-    aiConversation.push({ role: 'user', content: question }, { role: 'assistant', content: answer });
-    renderAiConversation();
-    aiMessage(`分析完成：使用 ${papers.length} 篇文獻，其中 ${available} 篇有摘要。請核對原文。`);
-    $('ai-question').value = '';
+    await work(config, controller);
   } catch (error) {
     aiMessage(error.name === 'AbortError' ? '已取消分析。' : `分析失敗：${error.message}`, error.name !== 'AbortError');
   } finally { aiAbort = null; setAiBusy(false); }
+}
+async function askAi(question) {
+  const papers = [...(!activeRound().fromAiSearch && state.selected.size ? state.selected.values() : state.items)];
+  const query = state.lastQuery;
+  await withAiTask((config, controller) => runAiAnalysis(question, { papers, query, config, controller }));
+}
+async function searchAndAnalyze(suggestion) {
+  const query = suggestion.trim();
+  if (!query) { aiMessage('請輸入 PubMed 搜尋式。', true); return; }
+  await withAiTask(async (config, controller) => {
+    const previous = activeRound();
+    $('query').value = query;
+    aiMessage('正在搜尋 PubMed，完成後會讀取目前搜尋結果的摘要…');
+    let result;
+    try { result = await performSearch(true, controller.signal); }
+    catch (error) { restoreRound(previous); throw error; }
+    if (!result) throw new Error('搜尋未完成，請重試。');
+    const round = addRound(`AI 搜尋 ${nextRoundId}`);
+    round.fromAiSearch = true;
+    saveRoundResults(round, result);
+    renderRoundTabs(); renderAiConversation(); updateAiScope();
+    const sourceNote = result.source === 'europepmc' ? '因 PubMed 連線失敗，使用 Europe PMC 備援搜尋，PubMed 進階語法可能不完全相同。' : '';
+    const question = `請根據剛才搜尋「${result.query}」的結果，整理這次取得的 ${result.papers.length} 篇文獻摘要（總搜尋結果 ${result.total} 篇，只分析目前這一頁），標示 PMID、說明限制並提出具體追問，協助我進一步縮小範圍。${sourceNote}${result.papers.length ? '' : '此次沒有搜尋到文獻，請勿虛構搜尋結果，請建議如何調整搜尋式。'}`;
+    await runAiAnalysis(question, { papers: result.papers, query: result.query, config, controller });
+  });
 }
 
 $('ai-provider').value = aiSettings.provider;
 loadAiProvider();
 updateAiScope();
+renderRoundTabs();
 $('ai-settings-toggle').addEventListener('click', () => {
   $('ai-settings').hidden = !$('ai-settings').hidden;
   $('ai-settings-toggle').setAttribute('aria-expanded', String(!$('ai-settings').hidden));
@@ -601,9 +734,14 @@ $('ai-test').addEventListener('click', async () => {
 $('ai-analyze').addEventListener('click', () => askAi('請根據目前提供的文獻摘要整理研究主題、主要發現與差異，標示 PMID，並提出能協助我縮小研究範圍的問題。'));
 $('ai-form').addEventListener('submit', event => { event.preventDefault(); const question = $('ai-question').value.trim(); if (question) askAi(question); });
 $('ai-cancel').addEventListener('click', () => aiAbort?.abort());
-$('ai-new').addEventListener('click', () => { aiConversation = []; renderAiConversation(); aiMessage('已開始新對話。'); });
+$('ai-new').addEventListener('click', () => {
+  const snapshot = activeRound().snapshot;
+  const round = addRound(`新對話 ${nextRoundId}`, null);
+  round.snapshot = snapshot;
+  restoreRound(round); renderRoundTabs(); renderAiConversation(); aiMessage('已開始新對話。');
+});
 $('ai-download').addEventListener('click', () => {
-  const report = aiConversation.map(message => `${message.role === 'user' ? '【研究問題】' : '【AI 研究助理】'}\n${message.content}`).join('\n\n');
+  const report = aiConversation.map(message => `【${rounds.find(round => round.id === message.roundId)?.label || '對話'}｜${message.role === 'user' ? '研究問題' : 'AI 研究助理'}】\n${message.content}${message.searchQuery ? `\n\n【建議的 PubMed 搜尋式】\n${message.searchQuery}` : ''}`).join('\n\n');
   const url = URL.createObjectURL(new Blob([report], { type: 'text/plain;charset=utf-8' }));
   const link = document.createElement('a'); link.href = url; link.download = 'litfetch-ai-report.txt'; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
 });

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { listModels, generateText, buildAnalysisPrompt } from '../ai.mjs';
+import { listModels, generateText, buildAnalysisPrompt, extractSearchSuggestion } from '../ai.mjs';
 
 test('Google models are paginated, filtered for text generation, and authenticated via headers', async t => {
   const original = globalThis.fetch;
@@ -41,6 +41,14 @@ test('analysis explicitly identifies missing abstracts and keeps PMID in the pro
   assert.match(prompt, /123/);
   assert.match(prompt, /無可用摘要/);
   assert.match(prompt, /不能推測研究結果/);
+});
+
+test('search suggestions require a single safe tagged query and keep ordinary replies intact', () => {
+  assert.deepEqual(extractSearchSuggestion('可以檢索。\n<pubmed_search>(asthma[Title/Abstract]) AND exercise</pubmed_search>'), { text: '可以檢索。', query: '(asthma[Title/Abstract]) AND exercise' });
+  assert.deepEqual(extractSearchSuggestion('請問研究對象？'), { text: '請問研究對象？', query: '' });
+  assert.equal(extractSearchSuggestion('<pubmed_search>x</pubmed_search><pubmed_search>y</pubmed_search>').query, '');
+  assert.equal(extractSearchSuggestion('<pubmed_search>https://example.com</pubmed_search>').query, '');
+  assert.equal(extractSearchSuggestion(`<pubmed_search>${'a'.repeat(1501)}</pubmed_search>`).query, '');
 });
 
 test('API errors include status and cancellation remains distinguishable', async t => {
