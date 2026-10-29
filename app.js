@@ -1,4 +1,5 @@
 import { makeZip } from './zip.mjs';
+import { renderMarkdown } from './markdown.mjs';
 import { PAGE_SIZE, MAX_EXPORT, buildPubmedQuery, normalizeSummary, metadataCsv, fileStem, chunks } from './domain.mjs';
 import { PROVIDERS, listModels, generateText, buildAnalysisPrompt, extractSearchSuggestion } from './ai.mjs?v=20261029-4';
 
@@ -609,7 +610,9 @@ function renderAiConversation() {
   for (const message of messages) {
     const item = document.createElement('div'); item.className = `ai-message ${message.role === 'user' ? 'ai-user' : 'ai-assistant'}`;
     const label = document.createElement('strong'); label.textContent = message.role === 'user' ? '你的問題' : 'AI 研究助理';
-    const body = document.createElement('div'); body.textContent = message.content;
+    const body = document.createElement('div'); body.className = 'ai-message-body';
+    const formatted = message.role === 'assistant' ? renderMarkdown(message.content) : null;
+    if (formatted === null) body.textContent = message.content; else body.innerHTML = formatted;
     item.append(label, body);
     if (message.role === 'assistant' && message.searchQuery) {
       const suggestion = document.createElement('div'); suggestion.className = 'ai-suggestion';
