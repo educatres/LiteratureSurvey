@@ -96,6 +96,12 @@ test('a suggested search analyzes the new results, not previously selected paper
   assert.equal(elements.query.value, 'new_topic');
   elements['next-page'].dispatch('click');
   await waitFor(() => elements['results-list'].innerHTML.includes('PMID 333'));
+  elements['page-label'].value = '0';
+  elements['page-label'].dispatch('change');
+  await waitFor(() => elements['results-list'].innerHTML.includes('PMID 222'));
+  elements['page-label'].value = '1';
+  elements['page-label'].dispatch('change');
+  await waitFor(() => elements['results-list'].innerHTML.includes('PMID 333'));
   const resultTabs = elements['results-round-tabs'].children;
   assert.equal(resultTabs.length, 3, 'each successful search gets its own tab');
   resultTabs[1].children[1].dispatch('click', { stopPropagation() {} });

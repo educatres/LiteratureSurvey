@@ -248,7 +248,11 @@ function renderResults() {
   }
   $('pagination').hidden = state.total <= getPageSize();
   const totalPages = Math.ceil(state.total / getPageSize()) || 1;
-  $('page-label').textContent = `第 ${state.page + 1} / ${totalPages} 頁`;
+  const pageLabel = $('page-label');
+  pageLabel.replaceChildren(...Array.from({ length: totalPages }, (_, page) => new Option(String(page + 1), String(page))));
+  pageLabel.value = String(state.page);
+  pageLabel.disabled = state.isSearching;
+  $('total-pages').textContent = String(totalPages);
   const pageLinks = $('page-links');
   pageLinks.replaceChildren();
   if (state.total > getPageSize()) {
@@ -669,6 +673,10 @@ $('select-page').addEventListener('click', () => {
 });
 $('clear-selection').addEventListener('click', () => { state.selected.clear(); renderResults(); persistWorkspace(); });
 $('prev-page').addEventListener('click', () => { if (state.page > 0) changeResultPage(state.page - 1); });
+$('page-label').addEventListener('change', event => {
+  const page = Number(event.target.value);
+  if (Number.isInteger(page) && page >= 0) changeResultPage(page);
+});
 $('next-page').addEventListener('click', () => { if ((state.page + 1) * getPageSize() < state.total) changeResultPage(state.page + 1); });
 $('page-size').addEventListener('change', event => {
   const next = getPageSize();
