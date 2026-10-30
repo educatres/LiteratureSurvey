@@ -96,6 +96,7 @@ test('a suggested search analyzes the new results, not previously selected paper
   assert.equal(elements.query.value, 'new_topic');
   elements['next-page'].dispatch('click');
   await waitFor(() => elements['results-list'].innerHTML.includes('PMID 333'));
+  assert.equal(elements['page-label'].disabled, false, 'pagination controls remain enabled after loading a new page');
   elements['page-label'].value = '0';
   elements['page-label'].dispatch('change');
   await waitFor(() => elements['results-list'].innerHTML.includes('PMID 222'));

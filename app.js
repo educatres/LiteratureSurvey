@@ -220,6 +220,7 @@ async function performSearch(resetPage = true, externalSignal) {
       state.isSearching = false;
       state.searchAbort = null;
       $('search-button').disabled = false;
+      updatePaginationInteractivity();
       $('search-button').querySelector('span').textContent = '搜尋文獻';
     }
   }
@@ -273,6 +274,8 @@ function renderResults() {
 function appendPageLink(page) {
   const button = document.createElement('button');
   button.type = 'button'; button.className = 'page-link'; button.textContent = String(page + 1);
+  button.dataset ||= {};
+  button.dataset.page = String(page);
   button.setAttribute('aria-label', `前往第 ${page + 1} 頁`); button.setAttribute('aria-current', String(page === state.page));
   button.disabled = page === state.page || state.isSearching;
   button.addEventListener('click', () => changeResultPage(page));
@@ -280,6 +283,16 @@ function appendPageLink(page) {
 }
 function appendPageEllipsis() {
   const span = document.createElement('span'); span.className = 'page-ellipsis'; span.textContent = '…'; $('page-links').append(span);
+}
+
+function updatePaginationInteractivity() {
+  $('page-label').disabled = state.isSearching;
+  $('prev-page').disabled = state.isSearching || state.page === 0;
+  $('next-page').disabled = state.isSearching || (state.page + 1) * getPageSize() >= state.total;
+  document.querySelectorAll('.page-link').forEach(button => {
+    const page = Number(button.dataset.page);
+    button.disabled = state.isSearching || page === state.page;
+  });
 }
 
 function updateBasket() {
