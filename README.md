@@ -2,6 +2,12 @@
 
 可直接部署到 **GitHub Pages** 的純靜態網頁。搜尋與匯出無需伺服器、資料庫或 AI API Key；選用 AI 分析時需提供自己的服務金鑰，不需要在 GitHub 儲存金鑰。
 
+## 授權
+
+除另有標示外，本專案的原創程式碼、文件與介面內容採用 [Creative Commons 姓名標示—非商業性—相同方式分享 4.0 國際授權（CC BY-NC-SA 4.0）](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant)。使用時請保留姓名標示、不得用於商業用途，並以相同授權條款分享改作內容。
+
+第三方套件、外部服務、PubMed／PMC／Europe PMC 資料與文獻內容不在本聲明授權範圍內，請依各自的授權與使用條款辦理。
+
 ## 功能
 
 - 使用 NCBI PubMed 官方 E-utilities (`ESearch`, `ESummary`, `EFetch`) 搜尋，支援 PubMed Boolean／欄位查詢語法。
