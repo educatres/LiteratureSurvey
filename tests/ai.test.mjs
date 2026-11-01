@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion, validateChatQuestion } from '../ai.mjs';
+import { DEFAULT_CGU_MODEL, DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion, validateChatQuestion } from '../ai.mjs';
 
 test('chat policy blocks prompt injection, identity changes, and non-literature requests', () => {
   for (const question of [
@@ -18,6 +18,7 @@ test('chat policy blocks prompt injection, identity changes, and non-literature 
 });
 
 test('preferred models choose the newest Luna or Flash Lite variant', () => {
+  assert.equal(DEFAULT_CGU_MODEL, 'gpt-oss:20b');
   assert.equal(DEFAULT_GOOGLE_MODEL, 'gemini-flash-latest');
   const models = [
     { id: 'luna-2.5-8b', label: 'Luna 2.5' },
@@ -28,6 +29,7 @@ test('preferred models choose the newest Luna or Flash Lite variant', () => {
   ];
   assert.equal(preferredModel('cgu', models), 'luna-3.1-8b');
   assert.equal(preferredModel('google', models), 'gemini-2.5-flash-lite');
+  assert.equal(preferredModel('cgu', [{ id: 'luna-3.1-8b' }, { id: DEFAULT_CGU_MODEL }]), DEFAULT_CGU_MODEL);
 });
 
 test('Google models are paginated, filtered for text generation, and authenticated via headers', async t => {

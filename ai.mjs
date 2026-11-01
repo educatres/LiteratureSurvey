@@ -1,4 +1,5 @@
 // AI providers are called directly from the user's browser. Never log keys or prompts.
+export const DEFAULT_CGU_MODEL = 'gpt-oss:20b';
 export const DEFAULT_GOOGLE_MODEL = 'gemini-flash-latest';
 
 export const PROVIDERS = {
@@ -92,6 +93,7 @@ function modelVersion(model) {
 }
 
 export function preferredModel(provider, models) {
+  if (provider === 'cgu' && models.some(model => model.id === DEFAULT_CGU_MODEL)) return DEFAULT_CGU_MODEL;
   const pattern = provider === 'cgu' ? /luna/i : provider === 'google' ? /flash[- ]?lite/i : null;
   if (!pattern) return '';
   return models

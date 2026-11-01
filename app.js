@@ -3,7 +3,7 @@ import { renderMarkdown } from './markdown.mjs';
 import { encodeWorkspace, decodeWorkspace, encodeProjectIndex, decodeProjectIndex } from './workspace.mjs';
 import { encodeProjectBackup, decodeProjectBackup, storeImportedProject, PROJECT_INDEX_STORAGE, PROJECT_WORKSPACE_PREFIX } from './project-backup.mjs';
 import { PAGE_SIZE, MAX_EXPORT, buildPubmedQuery, sortPapers, normalizeSummary, metadataCsv, fileStem, chunks } from './domain.mjs';
-import { PROVIDERS, DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion, validateChatQuestion } from './ai.mjs?v=20261101-9';
+import { PROVIDERS, DEFAULT_CGU_MODEL, DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion, validateChatQuestion } from './ai.mjs?v=20261101-10';
 
 const NCBI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
 const EPMC = 'https://www.ebi.ac.uk/europepmc/webservices/rest';
@@ -1224,12 +1224,14 @@ function loadAiProvider() {
   const provider = $('ai-provider').value;
   const saved = aiSettings.services[provider] || {};
   const savedModel = typeof saved.model === 'string' ? saved.model : '';
-  const isNewGoogleSelection = provider === 'google' && !savedModel;
+  const defaultModel = provider === 'cgu' ? DEFAULT_CGU_MODEL : provider === 'google' ? DEFAULT_GOOGLE_MODEL : '';
+  const isNewDefaultSelection = Boolean(defaultModel) && !savedModel;
   $('ai-key').value = typeof saved.key === 'string' ? saved.key : '';
-  $('ai-model').value = savedModel || (provider === 'google' ? DEFAULT_GOOGLE_MODEL : '');
-  if (isNewGoogleSelection) {
-    $('ai-model-list').replaceChildren(new Option(`Gemini Flash Latest (${DEFAULT_GOOGLE_MODEL})`, DEFAULT_GOOGLE_MODEL));
-    $('ai-model-list').value = DEFAULT_GOOGLE_MODEL;
+  $('ai-model').value = savedModel || defaultModel;
+  if (isNewDefaultSelection) {
+    const label = provider === 'google' ? `Gemini Flash Latest (${DEFAULT_GOOGLE_MODEL})` : DEFAULT_CGU_MODEL;
+    $('ai-model-list').replaceChildren(new Option(label, defaultModel));
+    $('ai-model-list').value = defaultModel;
   } else {
     $('ai-model-list').replaceChildren(new Option('請先讀取模型', ''));
   }
@@ -1458,16 +1460,18 @@ $('ai-test').addEventListener('click', async () => {
   try {
     const models = await listModels(provider, key, controller.signal);
     if (controller.signal.aborted || $('ai-provider').value !== provider || $('ai-key').value.trim() !== key) return;
-    const shouldPreferLatestGoogle = provider === 'google' && model === DEFAULT_GOOGLE_MODEL;
+    const defaultModel = provider === 'cgu' ? DEFAULT_CGU_MODEL : provider === 'google' ? DEFAULT_GOOGLE_MODEL : '';
+    const shouldPreferDefaultModel = Boolean(defaultModel) && model === defaultModel;
     const modelOptions = models.map(item => new Option(item.label === item.id ? item.id : `${item.label}（${item.id}）`, item.id));
-    if (shouldPreferLatestGoogle && !models.some(item => item.id === DEFAULT_GOOGLE_MODEL)) {
-      modelOptions.unshift(new Option(`Gemini Flash Latest (${DEFAULT_GOOGLE_MODEL})`, DEFAULT_GOOGLE_MODEL));
+    if (shouldPreferDefaultModel && !models.some(item => item.id === defaultModel)) {
+      const label = provider === 'google' ? `Gemini Flash Latest (${DEFAULT_GOOGLE_MODEL})` : DEFAULT_CGU_MODEL;
+      modelOptions.unshift(new Option(label, defaultModel));
     }
     $('ai-model-list').replaceChildren(new Option('選擇模型', ''), ...modelOptions);
     let autoSelected = false;
     const preferred = preferredModel(provider, models);
-    if (shouldPreferLatestGoogle) {
-      $('ai-model-list').value = DEFAULT_GOOGLE_MODEL; $('ai-model').value = DEFAULT_GOOGLE_MODEL; autoSelected = true;
+    if (shouldPreferDefaultModel) {
+      $('ai-model-list').value = defaultModel; $('ai-model').value = defaultModel; autoSelected = true;
     } else if (preferred && !models.some(item => item.id === model)) {
       $('ai-model-list').value = preferred; $('ai-model').value = preferred; autoSelected = true;
     } else if (models.some(item => item.id === model)) {
