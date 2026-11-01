@@ -3,7 +3,7 @@ import { renderMarkdown } from './markdown.mjs';
 import { encodeWorkspace, decodeWorkspace, encodeProjectIndex, decodeProjectIndex } from './workspace.mjs';
 import { encodeProjectBackup, decodeProjectBackup, storeImportedProject, PROJECT_INDEX_STORAGE, PROJECT_WORKSPACE_PREFIX } from './project-backup.mjs';
 import { PAGE_SIZE, MAX_EXPORT, buildPubmedQuery, sortPapers, normalizeSummary, metadataCsv, fileStem, chunks } from './domain.mjs';
-import { PROVIDERS, DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion } from './ai.mjs?v=20261101-7';
+import { PROVIDERS, DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion } from './ai.mjs?v=20261101-8';
 
 const NCBI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
 const EPMC = 'https://www.ebi.ac.uk/europepmc/webservices/rest';
@@ -1219,7 +1219,7 @@ function loadAiProvider() {
   $('ai-key').value = typeof saved.key === 'string' ? saved.key : '';
   $('ai-model').value = savedModel || (provider === 'google' ? DEFAULT_GOOGLE_MODEL : '');
   if (isNewGoogleSelection) {
-    $('ai-model-list').replaceChildren(new Option(`Gemini 2.5 Flash Lite (${DEFAULT_GOOGLE_MODEL})`, DEFAULT_GOOGLE_MODEL));
+    $('ai-model-list').replaceChildren(new Option(`Gemini Flash Latest (${DEFAULT_GOOGLE_MODEL})`, DEFAULT_GOOGLE_MODEL));
     $('ai-model-list').value = DEFAULT_GOOGLE_MODEL;
   } else {
     $('ai-model-list').replaceChildren(new Option('請先讀取模型', ''));
@@ -1441,11 +1441,17 @@ $('ai-test').addEventListener('click', async () => {
   try {
     const models = await listModels(provider, key, controller.signal);
     if (controller.signal.aborted || $('ai-provider').value !== provider || $('ai-key').value.trim() !== key) return;
-    $('ai-model-list').replaceChildren(new Option('選擇模型', ''), ...models.map(item => new Option(item.label === item.id ? item.id : `${item.label}（${item.id}）`, item.id)));
+    const shouldPreferLatestGoogle = provider === 'google' && model === DEFAULT_GOOGLE_MODEL;
+    const modelOptions = models.map(item => new Option(item.label === item.id ? item.id : `${item.label}（${item.id}）`, item.id));
+    if (shouldPreferLatestGoogle && !models.some(item => item.id === DEFAULT_GOOGLE_MODEL)) {
+      modelOptions.unshift(new Option(`Gemini Flash Latest (${DEFAULT_GOOGLE_MODEL})`, DEFAULT_GOOGLE_MODEL));
+    }
+    $('ai-model-list').replaceChildren(new Option('選擇模型', ''), ...modelOptions);
     let autoSelected = false;
     const preferred = preferredModel(provider, models);
-    const shouldPreferLatestGoogle = provider === 'google' && model === DEFAULT_GOOGLE_MODEL;
-    if (preferred && (shouldPreferLatestGoogle || !models.some(item => item.id === model))) {
+    if (shouldPreferLatestGoogle) {
+      $('ai-model-list').value = DEFAULT_GOOGLE_MODEL; $('ai-model').value = DEFAULT_GOOGLE_MODEL; autoSelected = true;
+    } else if (preferred && !models.some(item => item.id === model)) {
       $('ai-model-list').value = preferred; $('ai-model').value = preferred; autoSelected = true;
     } else if (models.some(item => item.id === model)) {
       $('ai-model-list').value = model;

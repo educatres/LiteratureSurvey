@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion } from '../ai.mjs';
+import { DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion } from '../ai.mjs';
 
 test('preferred models choose the newest Luna or Flash Lite variant', () => {
+  assert.equal(DEFAULT_GOOGLE_MODEL, 'gemini-flash-latest');
   const models = [
     { id: 'luna-2.5-8b', label: 'Luna 2.5' },
     { id: 'luna-3.1-8b', label: 'Luna 3.1' },

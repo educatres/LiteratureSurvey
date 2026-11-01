@@ -1,5 +1,5 @@
 // AI providers are called directly from the user's browser. Never log keys or prompts.
-export const DEFAULT_GOOGLE_MODEL = 'gemini-2.5-flash-lite';
+export const DEFAULT_GOOGLE_MODEL = 'gemini-flash-latest';
 
 export const PROVIDERS = {
   cgu: { label: 'CGU', base: 'https://air.cgu.edu.tw/cgullmapi/v1' },
