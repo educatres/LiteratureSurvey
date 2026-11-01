@@ -284,3 +284,7 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
 .topbar-settings .settings-content>.menu-panel-controls+.field-label{margin-top:0}
 .ai-collection-toggle{display:inline-flex;align-items:center;gap:7px;flex:0 1 250px;margin:0;color:#647d6d;font-size:11px;line-height:1.5;cursor:pointer}
 .ai-collection-toggle input{width:15px;height:15px;flex:none;accent-color:#2a8060}
+/* Chat safety notice */
+.ai-policy-note{margin:12px 0 7px;color:#71877a;font-size:11px;line-height:1.65}
+.ai-policy-warning{margin:8px 0;padding:10px 12px;border:1px solid #e8b7a8;border-radius:7px;background:#fff2ed;color:#9a3d2d;font-size:12px;line-height:1.65}
+.ai-policy-warning[hidden]{display:none}

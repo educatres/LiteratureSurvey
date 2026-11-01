@@ -3,7 +3,7 @@ import { renderMarkdown } from './markdown.mjs';
 import { encodeWorkspace, decodeWorkspace, encodeProjectIndex, decodeProjectIndex } from './workspace.mjs';
 import { encodeProjectBackup, decodeProjectBackup, storeImportedProject, PROJECT_INDEX_STORAGE, PROJECT_WORKSPACE_PREFIX } from './project-backup.mjs';
 import { PAGE_SIZE, MAX_EXPORT, buildPubmedQuery, sortPapers, normalizeSummary, metadataCsv, fileStem, chunks } from './domain.mjs';
-import { PROVIDERS, DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion } from './ai.mjs?v=20261101-8';
+import { PROVIDERS, DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion, validateChatQuestion } from './ai.mjs?v=20261101-9';
 
 const NCBI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
 const EPMC = 'https://www.ebi.ac.uk/europepmc/webservices/rest';
@@ -1092,7 +1092,10 @@ function restoreRound(round) {
   }
 }
 function conversationContext() {
-  return aiConversation.filter(message => message.chatId === activeChatId).map(({ role, content, searchQuery }) => ({ role, content, ...(searchQuery ? { searchQuery } : {}) }));
+  return aiConversation
+    .filter(message => message.chatId === activeChatId)
+    .filter(message => message.role !== 'user' || validateChatQuestion(message.content).allowed)
+    .map(({ role, content, searchQuery }) => ({ role, content, ...(searchQuery ? { searchQuery } : {}) }));
 }
 function chatLabel(chatId) { return String(Number(chatId.replace('chat-', '')) || 1).padStart(2, '0'); }
 function chatIds() {
@@ -1199,6 +1202,12 @@ async function changeResultPage(page) {
 function aiMessage(message, error = false) {
   $('ai-status').textContent = message;
   $('ai-status').classList.toggle('error', error);
+}
+function aiPolicyWarning(message = '') {
+  const notice = $('ai-policy-warning');
+  if (!notice) return;
+  notice.hidden = !message;
+  notice.textContent = message;
 }
 function aiSettingsMessage(message, error = false) {
   $('ai-settings-status').textContent = message;
@@ -1367,6 +1376,14 @@ async function withAiTask(work) {
   } finally { aiAbort = null; setAiBusy(false); }
 }
 async function askAi(question, { requireSelection = false, requireCollection = false, hideQuestion = false } = {}) {
+  const policy = validateChatQuestion(question);
+  if (!policy.allowed) {
+    aiPolicyWarning(policy.message);
+    aiMessage('訊息已攔截，未送出給 AI。', true);
+    $('ai-question').focus();
+    return;
+  }
+  aiPolicyWarning('');
   const useCollection = $('ai-use-collection').checked;
   if (requireCollection && !useCollection) { aiMessage('請先勾選「使用收藏的文獻清單摘要」，才能使用這個範例。', true); return; }
   if (useCollection && !state.selected.size) { aiMessage('請先在搜尋結果勾選文獻，加入「收藏的文獻清單」。', true); return; }
@@ -1466,6 +1483,7 @@ $('ai-example-compare').addEventListener('click', () => askAi('請逐篇摘要�
 $('ai-example-extend').addEventListener('click', () => askAi('請根據「收藏的文獻清單」的摘要，歸納研究方向與可能的研究缺口，提出能幫助我縮小範圍的問題；資訊足夠時，提供適合延伸查找相關文獻的 PubMed 搜尋式。', { requireSelection: true, requireCollection: true }));
 $('ai-use-collection').addEventListener('change', () => { updateAiScope(); renderAiConversation(); scheduleWorkspaceSave(); });
 $('ai-form').addEventListener('submit', event => { event.preventDefault(); const question = $('ai-question').value.trim(); if (question) askAi(question); });
+$('ai-question').addEventListener('input', () => { if ($('ai-policy-warning').hidden === false) aiPolicyWarning(''); });
 $('ai-cancel').addEventListener('click', () => aiAbort?.abort());
 $('ai-new-conversation').addEventListener('click', () => createNewChat());
 $('notebook-close').addEventListener('click', () => { $('notebook-menu').open = false; });
