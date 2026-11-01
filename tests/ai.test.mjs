@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_CGU_MODEL, DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion, validateChatQuestion } from '../ai.mjs';
+import { CGU_MODEL_IDS, DEFAULT_CGU_MODEL, DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion, validateChatQuestion } from '../ai.mjs';
 
 test('chat policy blocks prompt injection, identity changes, and non-literature requests', () => {
   for (const question of [
@@ -45,6 +45,20 @@ test('Google models are paginated, filtered for text generation, and authenticat
   assert.equal(calls[0].options.headers['x-goog-api-key'], 'secret');
   assert.ok(!calls[0].url.includes('secret'));
   assert.ok(calls[1].url.includes('pageToken=next'));
+});
+
+test('CGU model lists only expose the supported model choices', async t => {
+  const original = globalThis.fetch;
+  t.after(() => { globalThis.fetch = original; });
+  globalThis.fetch = async () => new Response(JSON.stringify({ data: [
+    { id: 'luna-3.1-8b' },
+    { id: 'gpt-oss-120b' },
+    { id: 'gemma-4-26b-a4b-it' },
+    { id: 'gpt-oss:20b' },
+    { id: 'embedding-model' }
+  ] }));
+  const models = await listModels('cgu', 'secret');
+  assert.deepEqual(new Set(models.map(model => model.id)), new Set(CGU_MODEL_IDS));
 });
 
 test('providers use their own generation routes and extract returned text', async t => {

@@ -1,6 +1,8 @@
 // AI providers are called directly from the user's browser. Never log keys or prompts.
 export const DEFAULT_CGU_MODEL = 'gpt-oss:20b';
 export const DEFAULT_GOOGLE_MODEL = 'gemini-flash-latest';
+export const CGU_MODEL_IDS = Object.freeze(['gemma-4-26b-a4b-it', DEFAULT_CGU_MODEL, 'gpt-oss-120b']);
+const CGU_MODEL_ID_SET = new Set(CGU_MODEL_IDS);
 
 export const PROVIDERS = {
   cgu: { label: 'CGU', base: 'https://air.cgu.edu.tw/cgullmapi/v1' },
@@ -81,7 +83,8 @@ export async function listModels(provider, key, signal) {
     }
     pageToken = google ? body.nextPageToken || '' : '';
   } while (pageToken);
-  return [...new Map(models.map(model => [model.id, model])).values()];
+  const uniqueModels = [...new Map(models.map(model => [model.id, model])).values()];
+  return provider === 'cgu' ? uniqueModels.filter(model => CGU_MODEL_ID_SET.has(model.id)) : uniqueModels;
 }
 
 function modelVersion(model) {
