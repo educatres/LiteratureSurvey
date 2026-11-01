@@ -850,6 +850,7 @@ function showProjectGate(message = '') {
   activeProjectId = null;
   projectIndex.activeProjectId = null;
   if (hadActiveProject) persistProjectIndex();
+  $('project-gate-shell').hidden = false;
   $('project-gate').hidden = false;
   $('topbar-right').hidden = true;
   $('app-main').hidden = true;
@@ -858,6 +859,7 @@ function showProjectGate(message = '') {
 }
 
 function showApp() {
+  $('project-gate-shell').hidden = true;
   $('project-gate').hidden = true;
   $('topbar-right').hidden = false;
   $('app-main').hidden = false;
