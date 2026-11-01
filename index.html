@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f8f5">
   <meta name="description" content="搜尋 PubMed、篩選與挑選文獻，批次下載摘要及可合法取得的開放取用全文。">
   <title>LiteratureSurvey</title>
-  <link rel="stylesheet" href="./styles.css?v=20261030-59">
+  <link rel="stylesheet" href="./styles.css?v=20261101-60">
   <script type="module" src="./app.js?v=20261030-50"></script>
 </head>
 <body>
@@ -34,6 +34,9 @@
           <label class="field-label" for="project-name">建立新專案</label>
           <div class="project-create-row"><input id="project-name" type="text" maxlength="80" placeholder="例如：博士論文、癌症研究" autocomplete="off" required><button type="submit" class="primary-button">建立並進入</button></div>
         </form>
+        <div class="google-ai-guide-actions">
+          <a class="google-ai-guide-button" href="./doc/googleAIstudioAPI/google-ai-studio-api-key-guide.html" target="_blank" rel="noopener">申請 Google AI Studio 免費 API Key</a>
+        </div>
         <p id="project-gate-status" class="storage-status" role="status" aria-live="polite" hidden></p>
       </div>
       </div>

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Google AI Studio 免費 Gemini API key 申請與複製步驟">
+  <title>Google AI Studio 免費 API Key 申請指南</title>
+  <style>
+    :root { color-scheme: light; --ink:#20352f; --muted:#60756e; --green:#147d6c; --green-soft:#eaf7f2; --gold:#f2ad3d; --line:#dceae4; --paper:#fff; --bg:#f4f8f6; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif; line-height:1.7; }
+    a { color:var(--green); }
+    .page { width:min(1080px, calc(100% - 32px)); margin:0 auto; }
+    .hero { padding:64px 0 38px; }
+    .eyebrow { color:var(--green); font-size:.82rem; font-weight:800; letter-spacing:.12em; }
+    h1 { margin:7px 0 12px; font-size:clamp(2rem, 5vw, 3.35rem); line-height:1.15; letter-spacing:-.03em; }
+    .lead { max-width:760px; margin:0; color:var(--muted); font-size:1.12rem; }
+    .hero-actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:24px; }
+    .button { display:inline-flex; align-items:center; min-height:44px; padding:8px 15px; border-radius:9px; border:1px solid var(--green); background:var(--green); color:#fff; text-decoration:none; font-weight:750; }
+    .button.secondary { background:#fff; color:var(--green); border-color:#a6cfc2; }
+    .notice { margin:24px 0 34px; padding:17px 20px; border:1px solid #f0d49c; border-left:5px solid var(--gold); border-radius:12px; background:#fffaf0; color:#684f25; }
+    .notice strong { color:#805e1b; }
+    .toc { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 36px; padding:14px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+    .toc a { padding:5px 9px; border-radius:7px; background:var(--green-soft); text-decoration:none; font-size:.92rem; }
+    .step { scroll-margin-top:20px; margin:0 0 34px; padding:26px; border:1px solid var(--line); border-radius:16px; background:var(--paper); box-shadow:0 9px 25px rgba(32,73,61,.08); }
+    .step-head { display:flex; gap:15px; align-items:flex-start; margin-bottom:18px; }
+    .step-number { flex:0 0 42px; width:42px; height:42px; display:grid; place-items:center; border-radius:50%; background:var(--green); color:#fff; font-size:1.1rem; font-weight:850; }
+    h2 { margin:0; font-size:clamp(1.25rem, 3vw, 1.65rem); line-height:1.3; }
+    .step-summary { margin:3px 0 0; color:var(--muted); }
+    .media { position:relative; width:100%; overflow:hidden; border:1px solid #d6e3de; border-radius:11px; background:#f8fbfa; }
+    .media img { display:block; width:100%; height:auto; }
+    .annotations { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+    .annotations rect,.annotations circle { fill:rgba(242,173,61,.09); stroke:#e08d15; stroke-width:3; vector-effect:non-scaling-stroke; }
+    .annotations line,.annotations polyline { fill:none; stroke:#e08d15; stroke-width:3; vector-effect:non-scaling-stroke; stroke-linecap:round; stroke-linejoin:round; }
+    .annotations polygon { fill:#e08d15; }
+    .caption { margin:9px 0 0; color:var(--muted); font-size:.9rem; }
+    .tip { margin:17px 0 0; padding:13px 15px; border-radius:9px; background:var(--green-soft); color:#315c50; }
+    .tip strong { color:#146c5d; }
+    .checklist { margin:0 0 36px; padding:24px 28px; border:1px solid var(--line); border-radius:16px; background:#fff; }
+    .checklist h2 { margin-bottom:10px; }
+    .checklist li { margin:5px 0; }
+    footer { padding:10px 0 54px; color:var(--muted); font-size:.9rem; }
+    code { padding:2px 5px; border-radius:5px; background:#edf2f0; font-size:.92em; }
+    @media (max-width:640px) { .page { width:min(100% - 20px, 1080px); } .hero { padding-top:38px; } .step { padding:17px; } .notice { padding:14px 15px; } }
+    @media print { body { background:#fff; } .hero { padding-top:18px; } .button,.toc { display:none; } .step { break-inside:avoid; box-shadow:none; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div class="eyebrow">GEMINI API · BYOK SETUP</div>
+      <h1>申請 Google AI Studio 免費 API Key</h1>
+      <p class="lead">跟著下列 5 個步驟建立 Gemini API key，再把它貼到 AI Homework Quiz 的 Google AI Studio 設定中。整個流程在瀏覽器完成，不需要建立伺服器。</p>
+      <div class="hero-actions">
+        <a class="button" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">直接開啟 API Keys 頁面 ↗</a>
+        <a class="button secondary" href="#steps">查看圖文步驟</a>
+      </div>
+    </header>
+
+    <div class="notice"><strong>免費方案提醒：</strong>Google AI Studio 的可用模型、速率限制、地區資格與是否需要啟用計費，會依 Google 帳戶與當期政策而變動。建立 key 前請確認畫面顯示的方案與限制；本指南不會替你啟用付費服務。</div>
+
+    <nav class="toc" aria-label="步驟導覽">
+      <a href="#step-1">1. 找到 AI Studio</a><a href="#step-2">2. 開啟 API Keys</a><a href="#step-3">3. 建立新 key</a><a href="#step-4">4. 選擇專案</a><a href="#step-5">5. 複製 key</a><a href="#security">安全檢查</a>
+    </nav>
+
+    <section id="steps" aria-label="申請步驟">
+      <article class="step" id="step-1">
+        <div class="step-head"><div class="step-number">1</div><div><h2>搜尋並開啟 Google AI Studio</h2><p class="step-summary">在 Google 搜尋 <strong>google ai studio api key</strong>，確認結果網址是 <code>aistudio.google.com</code>。</p></div></div>
+        <div class="media"><img src="step-01-search-google-ai-studio.png" alt="Google 搜尋 Google AI Studio API Keys 的結果" loading="lazy"><svg class="annotations" viewBox="0 0 703 562" preserveAspectRatio="none" aria-hidden="true"><rect x="157" y="192" width="410" height="39" rx="5"></rect><line x1="584" y1="78" x2="557" y2="190"></line><polygon points="548,190 561,183 558,198"></polygon></svg></div>
+        <p class="caption">橘框標示官方 API Keys 搜尋結果；開啟後可直接進入建立金鑰的頁面。</p>
+      </article>
+
+      <article class="step" id="step-2">
+        <div class="step-head"><div class="step-number">2</div><div><h2>進入 API Keys</h2><p class="step-summary">登入 Google 帳戶後，在左側專案導覽列點選 <strong>API Keys</strong>。</p></div></div>
+        <div class="media"><img src="step-02-open-api-keys.png" alt="Google AI Studio 左側導覽列的 API Keys 項目" loading="lazy"><svg class="annotations" viewBox="0 0 977 551" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="211" width="205" height="43" rx="6"></rect><line x1="253" y1="151" x2="207" y2="213"></line><polygon points="201,221 202,206 214,214"></polygon></svg></div>
+        <p class="caption">若頁面要求登入，請使用你要管理 API key 的 Google 帳戶登入。</p>
+      </article>
+
+      <article class="step" id="step-3">
+        <div class="step-head"><div class="step-number">3</div><div><h2>按下建立新金鑰</h2><p class="step-summary">在 API Keys 頁面按右上角的 <strong>Create API key</strong>，開啟建立視窗。</p></div></div>
+        <div class="media"><img src="step-03-create-new-key.png" alt="Create a new key 視窗，包含名稱與專案欄位" loading="lazy"><svg class="annotations" viewBox="0 0 589 355" preserveAspectRatio="none" aria-hidden="true"><rect x="48" y="128" width="469" height="33" rx="6"></rect><rect x="48" y="203" width="469" height="34" rx="6"></rect><line x1="569" y1="284" x2="515" y2="273"></line><polygon points="506,271 520,266 517,280"></polygon></svg></div>
+        <p class="caption">可在 Name your key 欄位輸入容易辨識的名稱，例如 <code>HomeworkQuiz-dev</code>。</p>
+      </article>
+
+      <article class="step" id="step-4">
+        <div class="step-head"><div class="step-number">4</div><div><h2>選擇或建立 Google Cloud 專案</h2><p class="step-summary">在 Choose an imported project 選擇現有專案；若沒有合適的專案，可選 <strong>Create project</strong>。</p></div></div>
+        <div class="media"><img src="step-04-choose-project.png" alt="建立 API key 時展開專案選單的畫面" loading="lazy"><svg class="annotations" viewBox="0 0 583 406" preserveAspectRatio="none" aria-hidden="true"><rect x="68" y="220" width="466" height="34" rx="6"></rect><rect x="73" y="344" width="454" height="47" rx="5"></rect><line x1="557" y1="169" x2="532" y2="226"></line><polygon points="526,236 523,221 537,227"></polygon></svg></div>
+        <p class="caption">橘框標示目前選取的專案與下方的 Gemini Project 選項；請確認專案名稱正確再建立 key。</p>
+      </article>
+
+      <article class="step" id="step-5">
+        <div class="step-head"><div class="step-number">5</div><div><h2>複製 API Key 並完成設定</h2><p class="step-summary">建立成功後會顯示 API key details。按 API Key 右側的複製圖示，或按右下角 <strong>Copy key</strong>。</p></div></div>
+        <div class="media"><img src="step-05-copy-api-key.png" alt="API key details 視窗與 Copy key 按鈕" loading="lazy"><svg class="annotations" viewBox="0 0 722 600" preserveAspectRatio="none" aria-hidden="true"><rect x="112" y="215" width="75" height="34" rx="5"></rect><rect x="492" y="490" width="89" height="35" rx="7"></rect><line x1="659" y1="464" x2="579" y2="496"></line><polygon points="570,501 580,489 585,503"></polygon></svg></div>
+        <p class="caption">API key 只會在這個流程中直接呈現。複製後立即貼到 AI Homework Quiz 的 Google AI Studio 設定欄位。</p>
+        <div class="tip"><strong>在本工具中：</strong>到「AI 設定」選擇 Google AI Studio，貼上 key，選擇模型後執行 Connection Test。若瀏覽器回報 CORS 或 API error，請依錯誤訊息處理；不要使用 <code>no-cors</code> 或第三方 proxy 掩蓋錯誤。</div>
+      </article>
+    </section>
+
+    <section class="checklist" id="security">
+      <h2>貼上前的安全檢查</h2>
+      <ul>
+        <li>API key 是秘密憑證：不要貼到 GitHub、作業 HTML、截圖、公開聊天室或瀏覽器 console。</li>
+        <li>本工具的 BYOK key 會依設定保存在你的瀏覽器；共用電腦使用完請按「清除 API Key」。</li>
+        <li>若 key 外洩，立即回到 Google AI Studio 的 API Keys 頁面刪除或輪替，並重新建立一把 key。</li>
+        <li>完成測試後，確認使用的模型與帳戶方案仍在 Google 顯示的免費額度和速率限制內。</li>
+      </ul>
+      <p>需要重新開啟時，可直接使用 <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio API Keys</a>。</p>
+    </section>
+
+    <footer>圖示截圖由本專案整理；本頁只說明操作流程，不代表 Google 對免費方案、模型或配額的永久承諾。最後檢視：2026-11-01。</footer>
+  </main>
+</body>
+</html>
