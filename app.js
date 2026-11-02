@@ -241,9 +241,9 @@ function renderResults() {
       const tooltipHtml = content => renderMarkdown(content) ?? escapeHtml(content);
       const assistBadges = `${cachedAbstract ? `<span class="paper-ai-marker"><button type="button" class="paper-ai-badge paper-abstract-badge" data-preview="${p.pmid}" aria-label="查看已保存的摘要">摘要</button><span class="paper-ai-tooltip" role="tooltip"><strong>摘要</strong>${escapeHtml(cachedAbstract)}</span></span>` : ''}${assisted.translation ? `<span class="paper-ai-marker"><button type="button" class="paper-ai-badge paper-translation-badge" data-preview="${p.pmid}" aria-label="查看已保存的中文翻譯">譯</button><span class="paper-ai-tooltip" role="tooltip"><strong>中文翻譯</strong>${tooltipHtml(assisted.translation)}</span></span>` : ''}${assisted.summary ? `<span class="paper-ai-marker"><button type="button" class="paper-ai-badge paper-summary-badge" data-preview="${p.pmid}" aria-label="查看已保存的 AI 摘要">AI</button><span class="paper-ai-tooltip" role="tooltip"><strong>AI 摘要</strong>${tooltipHtml(assisted.summary)}</span></span>` : ''}`;
       return `<article class="paper-card${selected ? ' is-selected' : ''}">
-        <div class="paper-index"><span class="paper-number">${String(state.page * getPageSize() + index + 1).padStart(3, '0')}</span><input type="checkbox" class="paper-checkbox" aria-label="選取 ${escapeHtml(p.title)}" data-pmid="${p.pmid}" ${selected ? 'checked' : ''}></div>
+        <div class="paper-index"><span class="paper-number">${String(state.page * getPageSize() + index + 1).padStart(3, '0')}</span><input type="checkbox" class="paper-checkbox" id="paper-select-${p.pmid}" aria-label="選取 ${escapeHtml(p.title)}" data-pmid="${p.pmid}" ${selected ? 'checked' : ''}></div>
         <div class="paper-main"><div class="paper-top"><div class="paper-pills">${assistBadges}${p.pmcid ? '<span class="pill pmc">PMC 收錄</span>' : ''}${articleType ? `<span class="pill type">${escapeHtml(articleType)}</span>` : ''}</div><div class="paper-publication"><span>${escapeHtml(p.journal)}</span><span>${escapeHtml(p.year || p.date)}</span><span>PMID ${p.pmid}</span></div></div>
-        <h3 class="paper-title">${escapeHtml(p.title)}</h3>
+        <h3 class="paper-title"><label for="paper-select-${p.pmid}">${escapeHtml(p.title)}</label></h3>
         <div class="paper-footer"><button type="button" data-preview="${p.pmid}">查看摘要 ↗</button><a href="https://pubmed.ncbi.nlm.nih.gov/${p.pmid}/" target="_blank" rel="noopener noreferrer">PubMed ↗</a>${p.pmcid ? `<a href="https://pmc.ncbi.nlm.nih.gov/articles/${p.pmcid}/" target="_blank" rel="noopener noreferrer">PMC 全文頁 ↗</a>` : ''}${p.doi ? `<a class="doi" href="https://doi.org/${encodeURIComponent(p.doi)}" target="_blank" rel="noopener noreferrer">DOI ↗</a>` : ''}</div></div></article>`;
     }).join('');
   }
@@ -1338,7 +1338,7 @@ function scrollToConversationMessage(messageId) {
   container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
 }
 function setAiBusy(busy) {
-  for (const id of ['ai-analyze', 'ai-send', 'ai-new-conversation', 'ai-clear-conversation', 'ai-settings-toggle', 'ai-example-organize', 'ai-example-compare', 'ai-example-extend']) $(id).disabled = busy;
+  for (const id of ['ai-analyze', 'ai-send', 'ai-new-conversation', 'ai-settings-toggle', 'ai-example-organize', 'ai-example-compare', 'ai-example-extend']) $(id).disabled = busy;
   $('ai-cancel').hidden = !busy;
   document.querySelectorAll('.ai-search-button').forEach(button => { button.disabled = busy; });
   renderRoundTabs();
@@ -1520,12 +1520,6 @@ $('ai-question').addEventListener('input', () => { if ($('ai-policy-warning').hi
 $('ai-cancel').addEventListener('click', () => aiAbort?.abort());
 $('ai-new-conversation').addEventListener('click', () => createNewChat());
 $('notebook-close').addEventListener('click', () => { $('notebook-menu').open = false; });
-$('ai-clear-conversation').addEventListener('click', () => {
-  if (!aiConversation.length) { aiMessage('目前沒有可清除的對話記錄。'); return; }
-  if (!window.confirm('確定要清除所有 AI 對話記錄嗎？這不會刪除搜尋記錄或「收藏的文獻清單」。')) return;
-  aiConversation = []; activeChatId = 'chat-1'; chatSequence = 1;
-  renderAiConversation(); aiMessage('已清除對話記錄。'); persistWorkspace();
-});
 $('ai-download').addEventListener('click', () => {
   const report = aiConversation.filter(message => !isHiddenConversationQuestion(message)).map(message => `【${message.role === 'user' ? 'Query' : 'AI 研究助理'}】\n${message.content}${message.searchQuery ? `\n\n【建議的 PubMed 搜尋式】\n${message.searchQuery}` : ''}`).join('\n\n');
   const url = URL.createObjectURL(new Blob([report], { type: 'text/plain;charset=utf-8' }));

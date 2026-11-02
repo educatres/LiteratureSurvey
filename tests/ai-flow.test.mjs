@@ -148,11 +148,12 @@ test('a suggested search analyzes the new results, not previously selected paper
   elements['ai-cancel'].dispatch('click');
   await waitFor(() => elements['ai-status'].textContent.includes('已取消') && !elements['ai-send'].disabled);
   assert.equal(prompts.length, 3, 'cancelled searches must not invoke AI');
-  elements['ai-clear-conversation'].dispatch('click');
+  assert.equal(elements['ai-clear-conversation'], undefined, 'the clear conversation button is removed');
+  elements['ai-new-conversation'].dispatch('click');
   assert.equal(elements['ai-conversation'].children.length, 1);
   assert.match(elements['ai-conversation'].children[0].textContent, /選取文獻後開始整理/);
-  assert.equal(elements['ai-download'].disabled, true);
-  assert.equal(elements['results-round-tabs'].children.length, 3, 'clearing the conversation keeps search history');
+  assert.equal(elements['ai-download'].disabled, false, 'starting a new conversation retains previous messages for export');
+  assert.equal(elements['results-round-tabs'].children.length, 3, 'starting a new conversation keeps search history');
   elements['ai-analyze'].dispatch('click');
   await waitFor(() => prompts.length === 4 && !elements['ai-send'].disabled);
   assert.equal(elements['ai-conversation'].children.length, 1, 'the preset analysis question is not rendered as a user message');
