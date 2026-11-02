@@ -27,7 +27,8 @@ test('a suggested search analyzes the new results, not previously selected paper
   };
   globalThis.Option = class extends Element { constructor(label, value) { super(); this.textContent = label; this.value = value; } };
   globalThis.window = { confirm: () => true, prompt: () => '自訂搜尋分頁' };
-  globalThis.localStorage = { getItem: key => key === 'litfetch.ai.settings.v1' ? JSON.stringify({ provider: 'openai', services: { cgu: { key: 'test-key', model: 'text-model' } } }) : null, setItem() {} };
+  const storage = new Map();
+  globalThis.localStorage = { getItem: key => key === 'litfetch.ai.settings.v1' ? JSON.stringify({ provider: 'openai', services: { cgu: { key: 'test-key', model: 'text-model' } } }) : storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) };
   globalThis.DOMParser = class {
     parseFromString(text) {
       const pmid = text.match(/abstract-(\d+)/)?.[1];
@@ -68,6 +69,8 @@ test('a suggested search analyzes the new results, not previously selected paper
     throw new Error('Timed out waiting for UI state');
   };
   await import('../app.js');
+  elements['project-name'].value = 'Test project';
+  elements['project-create-form'].dispatch('submit');
   assert.equal(elements['ai-provider'].value, 'cgu', 'a saved unavailable provider falls back to CGU');
   assert.equal(elements['ai-base-url'].textContent, 'https://air.cgu.edu.tw/cgullmapi/v1');
   elements['ai-provider'].value = 'google';
@@ -161,8 +164,19 @@ test('a suggested search analyzes the new results, not previously selected paper
   assert.equal(prompts.length, 3, 'cancelled searches must not invoke AI');
   assert.equal(elements['ai-clear-conversation'], undefined, 'the clear conversation button is removed');
   elements['ai-new-conversation'].dispatch('click');
-  assert.equal(elements['ai-conversation'].children.length, 1);
-  assert.match(elements['ai-conversation'].children[0].textContent, /選取文獻後開始整理/);
+  assert.equal(elements['ai-conversation'].children.length, 0);
+  const chatTabs = () => elements['ai-chat-tabs'].children.slice(1);
+  assert.deepEqual(chatTabs().map(tab => tab.textContent), ['01', '02']);
+  assert.equal(chatTabs()[1].disabled, true, 'the new empty conversation is active');
+  chatTabs()[0].dispatch('click');
+  assert.ok(elements['ai-conversation'].children.length > 0);
+  chatTabs()[1].dispatch('click');
+  assert.equal(elements['ai-conversation'].children.length, 0);
+  elements['project-switch'].dispatch('click');
+  elements['project-list'].children[0].children[0].dispatch('click');
+  assert.deepEqual(chatTabs().map(tab => tab.textContent), ['01', '02']);
+  assert.equal(chatTabs()[1].disabled, true, 'reopening the project restores the active empty conversation');
+  assert.equal(elements['ai-conversation'].children.length, 0);
   assert.equal(elements['ai-download'], undefined, 'the download conversation report button is removed');
   assert.equal(elements['results-round-tabs'].children.length, 3, 'starting a new conversation keeps search history');
   elements['ai-analyze'].dispatch('click');

@@ -734,6 +734,7 @@ let aiResponseTestAbort = null;
 let conversationSequence = 0;
 let activeChatId = 'chat-1';
 let chatSequence = 1;
+let emptyChatIds = new Set();
 let abstractAiAbort = null;
 let abstractView = { pmid: '', text: '', translation: '', summary: '' };
 
@@ -869,7 +870,7 @@ function showApp() {
 function resetWorkspaceRuntime() {
   clearTimeout(saveTimer); saveTimer = null; workspaceGeneration++;
   rounds.splice(0, rounds.length, { id: 0, label: '初始對話', parent: null, snapshot: null });
-  activeRoundId = 0; nextRoundId = 1; aiConversation = []; conversationSequence = 0; activeChatId = 'chat-1'; chatSequence = 1;
+  activeRoundId = 0; nextRoundId = 1; aiConversation = []; conversationSequence = 0; activeChatId = 'chat-1'; chatSequence = 1; emptyChatIds.clear();
   state.page = 0; state.total = 0; state.items = []; state.selected = new Map(); state.lastQuery = '';
   state.abstractCache = new Map(); state.abstractAssistCache = new Map(); state.searchSource = 'ncbi';
   state.epmcCursors = new Map([[0, '*']]); abstractView = { pmid: '', text: '', translation: '', summary: '' }; storageBlocked = false;
@@ -970,9 +971,10 @@ function openProject(projectId) {
     state.selected = saved.selected; state.abstractCache = saved.abstracts; state.abstractAssistCache = saved.abstractAssists;
     aiConversation = saved.conversation; activeChatId = saved.activeChatId || 'chat-1'; chatSequence = saved.chatSequence || 1;
     for (const message of aiConversation) message.chatId ||= 'chat-1';
-    const chatIds = new Set(['chat-1', ...aiConversation.map(message => message.chatId).filter(Boolean)]);
-    if (!chatIds.has(activeChatId)) activeChatId = 'chat-1';
-    chatSequence = Math.max(chatSequence, ...[...chatIds].map(id => Number(String(id).replace('chat-', '')) || 1));
+    emptyChatIds = new Set(saved.emptyChatIds);
+    const restoredChatIds = chatIds();
+    if (!restoredChatIds.includes(activeChatId)) activeChatId = 'chat-1';
+    chatSequence = Math.max(chatSequence, ...restoredChatIds.map(id => Number(id.replace('chat-', '')) || 1));
     for (const id of WORKSPACE_FIELDS) {
       if (CHECKBOX_WORKSPACE_FIELDS.has(id)) $(id).checked = saved.fields[id] === undefined ? id === 'ai-use-collection' : Boolean(saved.fields[id]);
       else if (typeof saved.fields[id] === 'string') $(id).value = saved.fields[id];
@@ -996,7 +998,7 @@ function persistWorkspace() {
   try {
     const fields = Object.fromEntries(WORKSPACE_FIELDS.map(id => [id, CHECKBOX_WORKSPACE_FIELDS.has(id) ? $(id).checked : $(id).value]));
     localStorage.setItem(projectWorkspaceStorage(), encodeWorkspace({ rounds, activeRoundId, nextRoundId,
-      selected: state.selected, abstracts: state.abstractCache, abstractAssists: state.abstractAssistCache, conversation: aiConversation, fields, activeChatId, chatSequence }));
+      selected: state.selected, abstracts: state.abstractCache, abstractAssists: state.abstractAssistCache, conversation: aiConversation, fields, activeChatId, chatSequence, emptyChatIds: [...emptyChatIds] }));
     const project = projectById(activeProjectId);
     if (project) { project.updatedAt = new Date().toISOString(); persistProjectIndex(); }
     storageNotice('');
@@ -1017,7 +1019,7 @@ function clearWorkspace() {
   catch { storageNotice('無法清除瀏覽器儲存的搜尋紀錄，請檢查瀏覽器設定。', true); return; }
   resetWorkspaceRuntime();
   rounds.splice(0, rounds.length, { id: 0, label: '初始對話', parent: null, snapshot: null });
-  activeRoundId = 0; nextRoundId = 1; aiConversation = []; activeChatId = 'chat-1'; chatSequence = 1;
+  activeRoundId = 0; nextRoundId = 1; aiConversation = []; activeChatId = 'chat-1'; chatSequence = 1; emptyChatIds.clear();
   state.abstractCache = new Map(); state.abstractAssistCache = new Map();
   state.searchSource = 'ncbi';
   for (const id of WORKSPACE_FIELDS) {
@@ -1100,7 +1102,7 @@ function conversationContext() {
 }
 function chatLabel(chatId) { return String(Number(chatId.replace('chat-', '')) || 1).padStart(2, '0'); }
 function chatIds() {
-  const ids = new Set(['chat-1']);
+  const ids = new Set(['chat-1', ...emptyChatIds]);
   for (const message of aiConversation) if (message.chatId) ids.add(message.chatId);
   return [...ids].sort((a, b) => Number(a.replace('chat-', '')) - Number(b.replace('chat-', '')));
 }
@@ -1115,8 +1117,8 @@ function renderChatTabs() {
   }
 }
 function createNewChat(seed = []) {
-  chatSequence = Math.max(chatSequence, ...chatIds().map(id => Number(id.replace('chat-', '')) || 1));
   const chatId = `chat-${++chatSequence}`; activeChatId = chatId;
+  if (!seed.length) emptyChatIds.add(chatId);
   aiConversation.push(...seed.map(message => ({ ...message, id: undefined, chatId, noted: false, ...(message.role === 'user' ? { hidden: false } : {}) })));
   renderAiConversation(); persistWorkspace();
 }
@@ -1259,9 +1261,6 @@ function renderAiConversation() {
   const container = $('ai-conversation');
   container.replaceChildren();
   const messages = aiConversation.filter(message => message.chatId === activeChatId && !isHiddenConversationQuestion(message));
-  if (!messages.length) {
-    const empty = document.createElement('p'); empty.className = 'ai-empty'; empty.textContent = '選取文獻後開始整理；取消勾選後也可直接輸入研究問題。'; container.append(empty);
-  }
   let assistantSequence = 0;
   let queryBlock = null;
   for (const [index, message] of messages.entries()) {
@@ -1367,6 +1366,7 @@ async function runAiAnalysis(question, { papers, query, config, controller, hide
   const answer = await generateText({ ...config, prompt, signal: controller.signal });
   if (controller.signal.aborted) throw abortError();
   const suggestion = extractSearchSuggestion(answer);
+  emptyChatIds.delete(activeChatId);
   aiConversation.push({ role: 'user', content: question, roundId: activeRoundId, chatId: activeChatId, ...(hideQuestion ? { hidden: true } : {}) }, { role: 'assistant', content: suggestion.text, searchQuery: suggestion.query, roundId: activeRoundId, chatId: activeChatId });
   renderAiConversation();
   aiMessage(papers.length ? `分析完成：使用 ${papers.length} 篇文獻，其中 ${available} 篇有摘要。請核對原文。` : '分析完成：已根據目前對話整理研究條件。');

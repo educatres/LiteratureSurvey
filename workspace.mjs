@@ -1,10 +1,10 @@
 // Keep browser storage JSON-compatible while preserving cursor maps in memory.
-export function encodeWorkspace({ rounds, activeRoundId, nextRoundId, selected, abstracts, abstractAssists = new Map(), conversation, fields, activeChatId = 'chat-1', chatSequence = 1 }) {
+export function encodeWorkspace({ rounds, activeRoundId, nextRoundId, selected, abstracts, abstractAssists = new Map(), conversation, fields, activeChatId = 'chat-1', chatSequence = 1, emptyChatIds = [] }) {
   return JSON.stringify({ version: 1, activeRoundId, nextRoundId,
     rounds: rounds.map(round => ({ ...round, snapshot: round.snapshot && {
       ...round.snapshot, cursors: [...round.snapshot.cursors]
     } })),
-    selected: [...selected], abstracts: [...abstracts], abstractAssists: [...abstractAssists], conversation, fields, activeChatId, chatSequence
+    selected: [...selected], abstracts: [...abstracts], abstractAssists: [...abstractAssists], conversation, fields, activeChatId, chatSequence, emptyChatIds
   });
 }
 
@@ -46,7 +46,10 @@ export function decodeWorkspace(raw) {
       typeof entry[1].translation === 'string' && typeof entry[1].summary === 'string')) throw new Error('Invalid abstract assists');
   const activeChatId = typeof saved.activeChatId === 'string' && /^chat-\d+$/.test(saved.activeChatId) ? saved.activeChatId : 'chat-1';
   const chatSequence = Number.isSafeInteger(saved.chatSequence) && saved.chatSequence >= 1 ? saved.chatSequence : 1;
-  return { ...saved, rounds, selected: new Map(saved.selected), abstracts: new Map(saved.abstracts), abstractAssists: new Map(abstractAssists), activeChatId, chatSequence };
+  const emptyChatIds = Array.isArray(saved.emptyChatIds)
+    ? saved.emptyChatIds.filter(id => typeof id === 'string' && /^chat-\d+$/.test(id))
+    : [];
+  return { ...saved, rounds, selected: new Map(saved.selected), abstracts: new Map(saved.abstracts), abstractAssists: new Map(abstractAssists), activeChatId, chatSequence, emptyChatIds };
 }
 
 export function encodeProjectIndex({ projects, activeProjectId = null }) {
