@@ -18,7 +18,7 @@ test('chat policy blocks prompt injection, identity changes, and non-literature 
 });
 
 test('preferred models choose the newest Luna or Flash Lite variant', () => {
-  assert.equal(DEFAULT_CGU_MODEL, 'gpt-oss:20b');
+  assert.equal(DEFAULT_CGU_MODEL, 'gemma-4-26b-a4b-it');
   assert.equal(DEFAULT_GOOGLE_MODEL, 'gemini-flash-lite-latest');
   const models = [
     { id: 'luna-2.5-8b', label: 'Luna 2.5' },

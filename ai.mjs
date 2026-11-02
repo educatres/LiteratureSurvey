@@ -1,9 +1,9 @@
 // AI providers are called directly from the user's browser. Never log keys or prompts.
-export const DEFAULT_CGU_MODEL = 'gpt-oss:20b';
+export const DEFAULT_CGU_MODEL = 'gemma-4-26b-a4b-it';
 export const GOOGLE_AI_STUDIO_BASE = 'https://generativelanguage.googleapis.com/v1beta/openai';
 export const GOOGLE_AI_STUDIO_LEGACY_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 export const DEFAULT_GOOGLE_MODEL = 'gemini-flash-lite-latest';
-export const CGU_MODEL_IDS = Object.freeze(['gemma-4-26b-a4b-it', DEFAULT_CGU_MODEL, 'gpt-oss-120b']);
+export const CGU_MODEL_IDS = Object.freeze([DEFAULT_CGU_MODEL, 'gpt-oss:20b', 'gpt-oss-120b']);
 const CGU_MODEL_ID_SET = new Set(CGU_MODEL_IDS);
 
 export const PROVIDERS = {
