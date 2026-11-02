@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f8f5">
   <meta name="description" content="搜尋 PubMed、篩選與挑選文獻，批次下載摘要及可合法取得的開放取用全文。">
   <title>LiteratureSurvey</title>
-  <link rel="stylesheet" href="./styles.css?v=20261103-5">
+  <link rel="stylesheet" href="./styles.css?v=20261103-6">
   <script type="module" src="./app.js?v=20261103-6"></script>
 </head>
 <body>
@@ -90,7 +90,7 @@
           <button type="button" id="ai-cancel" class="subtle-button ai-cancel-button" hidden>取消分析</button>
           <div id="ai-chat-tabs" class="ai-chat-tabs" role="tablist" aria-label="AI 對話分頁"></div>
           <div id="ai-conversation" class="ai-conversation" aria-live="polite"><p class="ai-empty">選取文獻後開始整理；取消勾選後也可直接輸入研究問題。</p></div>
-          <p class="ai-policy-note">本對話僅供文獻查找、整理、分析與文獻數據整理；不處理其他用途，也不提供系統提示詞或變更 AI 身分。</p>
+
           <div id="ai-policy-warning" class="ai-policy-warning" role="alert" hidden></div>
           <p id="ai-status" class="ai-status" role="status" aria-live="polite"></p>
           <form id="ai-form" class="ai-form"><label class="sr-only" for="ai-question">Query</label><textarea id="ai-question" rows="2" placeholder="例如：我想找成人第二型糖尿病患者的運動介入研究，該如何縮小範圍？"></textarea><button type="submit" class="ai-primary" id="ai-send">送出問題 →</button></form>

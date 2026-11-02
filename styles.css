@@ -288,7 +288,6 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
 .ai-collection-toggle{display:inline-flex;align-items:center;gap:7px;flex:0 1 250px;margin:0;color:#647d6d;font-size:12.1px;line-height:1.5;cursor:pointer}
 .ai-collection-toggle input{width:15px;height:15px;flex:none;accent-color:#2a8060}
 /* Chat safety notice */
-.ai-policy-note{margin:12px 0 7px;color:#71877a;font-size:12.1px;line-height:1.65}
 .ai-policy-warning{margin:8px 0;padding:10px 12px;border:1px solid #e8b7a8;border-radius:7px;background:#fff2ed;color:#9a3d2d;font-size:13.2px;line-height:1.65}
 .ai-policy-warning[hidden]{display:none}
 
@@ -302,3 +301,8 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
 .search-rate-settings .settings-content>.field-label:first-child{margin-top:0}
 .search-rate-settings input:focus{border-color:#57a07e;outline:2px solid #d8eee0;outline-offset:0}
 .ai-settings-menu .ai-settings{max-height:calc(100dvh - 100px);overscroll-behavior:contain}
+
+/* Keep the conversation directly against the message input. */
+.ai-conversation{margin-bottom:0}
+.ai-form{margin-top:0;padding-top:0;border-top:0}
+#ai-status:empty{display:none}
