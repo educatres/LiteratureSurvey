@@ -77,7 +77,16 @@ test('a suggested search analyzes the new results, not previously selected paper
   elements['ai-provider'].dispatch('change');
   assert.equal(elements['ai-provider'].value, 'cgu', 'unavailable providers cannot be activated');
   assert.equal(elements['ai-base-url'].textContent, 'https://air.cgu.edu.tw/cgullmapi/v1');
+  for (const id of ['ai-analyze', 'ai-example-organize', 'ai-example-compare', 'ai-example-extend', 'ai-example-narrow']) {
+    elements['ai-question'].value = '';
+    elements[id].dispatch('click');
+    assert.ok(elements['ai-question'].value.length > 0, `${id} fills the input without requiring selected papers`);
+    assert.equal(prompts.length, 0, `${id} does not invoke AI`);
+    assert.equal(elements['ai-send'].disabled, false);
+  }
   elements['ai-example-organize'].dispatch('click');
+  assert.ok(elements['ai-question'].value.length > 0);
+  elements['ai-form'].dispatch('submit');
   assert.match(elements['ai-status'].textContent, /請先.*勾選文獻/);
   assert.equal(prompts.length, 0);
   elements.query.value = 'old_topic';
@@ -132,6 +141,8 @@ test('a suggested search analyzes the new results, not previously selected paper
   assert.equal(elements.query.value, 'new_topic');
   assert.match(elements['ai-conversation'].children[1].children[2].textContent, /整理新文獻/);
   elements['ai-example-organize'].dispatch('click');
+  assert.equal(prompts.length, 2, 'examples only fill the input');
+  elements['ai-form'].dispatch('submit');
   await waitFor(() => prompts.length === 3 && !elements['ai-send'].disabled);
   const selectedRecords = prompts[2].split('文獻資料（JSON）：')[1].split('\n先前對話')[0];
   assert.match(selectedRecords, /"pmid":"111"/);
@@ -155,6 +166,8 @@ test('a suggested search analyzes the new results, not previously selected paper
   assert.equal(elements['ai-download'], undefined, 'the download conversation report button is removed');
   assert.equal(elements['results-round-tabs'].children.length, 3, 'starting a new conversation keeps search history');
   elements['ai-analyze'].dispatch('click');
+  assert.equal(prompts.length, 3, 'analysis example waits for user submission');
+  elements['ai-form'].dispatch('submit');
   await waitFor(() => prompts.length === 4 && !elements['ai-send'].disabled);
   assert.equal(elements['ai-conversation'].children.length, 1, 'the preset analysis question is not rendered as a user message');
   assert.match(elements['ai-conversation'].children[0].className, /ai-assistant/);
@@ -187,9 +200,15 @@ test('a suggested search analyzes the new results, not previously selected paper
   elements['results-list'].dispatch('change', { target: { matches: () => true, dataset: { pmid: '111' }, checked: false } });
   elements['ai-use-collection'].checked = true;
   elements['ai-example-narrow'].dispatch('click');
+  assert.equal(prompts.length, 6, 'narrowing only fills the input');
+  assert.match(elements['ai-question'].value, /new_topic/);
+  elements['ai-question'].value += ' Edited research question';
+  elements['ai-use-collection'].checked = false;
+  elements['ai-form'].dispatch('submit');
   assert.equal(elements['ai-example-narrow'].disabled, true, 'narrowing is disabled during analysis');
   await waitFor(() => prompts.length === 7 && !elements['ai-send'].disabled);
   assert.equal(elements['ai-example-narrow'].disabled, false);
+  assert.match(prompts[6], /Edited research question/, 'the edited draft is sent');
   assert.match(prompts[6], /new_topic/, 'narrowing includes the current search');
   assert.match(prompts[6], /JSON[^\n]*\[\]/, 'narrowing works without selected papers');
 
