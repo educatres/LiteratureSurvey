@@ -1012,7 +1012,7 @@ function clearWorkspace() {
   if (aiAbort || state.isSearching || state.isExporting) {
     storageNotice('請先等搜尋、分析或下載完成，或取消進行中的作業。', true); return;
   }
-  if (!window.confirm('清除這個瀏覽器的所有搜尋結果、摘要及 AI 對話嗎？「收藏的文獻清單」中的文獻不會刪除。')) return;
+  if (!window.confirm('清除這個瀏覽器的所有搜尋結果、摘要及 AI 對話嗎？「收藏匣」中的文獻不會刪除。')) return;
   try { localStorage.removeItem(projectWorkspaceStorage()); }
   catch { storageNotice('無法清除瀏覽器儲存的搜尋紀錄，請檢查瀏覽器設定。', true); return; }
   resetWorkspaceRuntime();
@@ -1027,7 +1027,7 @@ function clearWorkspace() {
   previousPageSize = getPageSize();
   if ($('abstract-dialog').open) $('abstract-dialog').close();
   restoreRound(activeRound()); renderRoundTabs(); renderAiConversation(); aiMessage('');
-  storageNotice('已清除搜尋紀錄與對話；收藏的文獻清單及 AI 金鑰設定保留。');
+  storageNotice('已清除搜尋紀錄與對話；收藏匣及 AI 金鑰設定保留。');
 }
 
 function removeRound(roundId) {
@@ -1036,7 +1036,7 @@ function removeRound(roundId) {
   }
   const round = rounds.find(item => item.id === roundId);
   if (!round || round.id === 0) return;
-  if (!window.confirm(`確定要清除「${round.label}」搜尋記錄嗎？「收藏的文獻清單」中的文獻不會刪除。`)) return;
+  if (!window.confirm(`確定要清除「${round.label}」搜尋記錄嗎？「收藏匣」中的文獻不會刪除。`)) return;
   const index = rounds.findIndex(item => item.id === roundId);
   rounds.splice(index, 1);
   for (const message of aiConversation) if (message.roundId === roundId) message.roundId = 0;
@@ -1247,7 +1247,7 @@ function loadAiProvider() {
 }
 function updateAiScope() {
   if (!$('ai-use-collection').checked) {
-    $('ai-scope').textContent = '不參考收藏的文獻清單；AI 會透過多輪對話蒐集研究條件，資訊足夠時產生 PubMed 搜尋式。';
+    $('ai-scope').textContent = '不參考收藏匣；AI 會透過多輪對話蒐集研究條件，資訊足夠時產生 PubMed 搜尋式。';
     return;
   }
   const count = state.selected.size;
@@ -1347,7 +1347,7 @@ function requireAiConfig() {
   if (!config.key || !config.model) { aiMessage('請先開啟「連接AI」，輸入 API Key 並選擇或輸入模型。', true); $('ai-settings-menu').open = true; $('ai-settings-toggle').setAttribute('aria-expanded', 'true'); return null; }
   return config;
 }
-async function runAiAnalysis(question, { papers, query, config, controller, hideQuestion = false, papersSource = '收藏的文獻清單' }) {
+async function runAiAnalysis(question, { papers, query, config, controller, hideQuestion = false, papersSource = '收藏匣' }) {
   if (papers.length) aiMessage(`正在取得 ${papers.length} 篇文獻的摘要…`);
   else aiMessage('正在根據目前對話整理研究條件…');
   const missing = papers.filter(p => !state.abstractCache.has(p.pmid));
@@ -1393,8 +1393,8 @@ async function askAi(question, { requireSelection = false, requireCollection = f
     return;
   }
   aiPolicyWarning('');
-  if (requireCollection && !useCollection) { aiMessage('請先勾選「使用收藏的文獻清單摘要」，才能使用這個範例。', true); return; }
-  if (useCollection && !state.selected.size) { aiMessage('請先在搜尋結果勾選文獻，加入「收藏的文獻清單」。', true); return; }
+  if (requireCollection && !useCollection) { aiMessage('請先勾選「使用收藏匣摘要」，才能使用這個範例。', true); return; }
+  if (useCollection && !state.selected.size) { aiMessage('請先在搜尋結果勾選文獻，加入「收藏匣」。', true); return; }
   const papers = useCollection ? [...state.selected.values()] : [];
   const query = useCollection ? state.lastQuery : '';
   await withAiTask((config, controller) => runAiAnalysis(question, { papers, query, config, controller, hideQuestion }));
@@ -1515,14 +1515,14 @@ function fillAiQuestion(question) {
   scheduleWorkspaceSave();
 }
 $('ai-analyze').addEventListener('click', () => fillAiQuestion(DEFAULT_ANALYSIS_QUESTION));
-$('ai-example-organize').addEventListener('click', () => fillAiQuestion('請整理「收藏的文獻清單」中各篇文獻摘要，按研究主題歸類，標示 PMID、主要發現與證據限制；缺少摘要的文獻請明確註明。'));
-$('ai-example-compare').addEventListener('click', () => fillAiQuestion('請逐篇摘要「收藏的文獻清單」中的文獻，比較各篇的研究對象、方法、主要結果與差異，標示 PMID；摘要未提及的資訊請註明未提供。'));
+$('ai-example-organize').addEventListener('click', () => fillAiQuestion('請整理「收藏匣」中各篇文獻摘要，按研究主題歸類，標示 PMID、主要發現與證據限制；缺少摘要的文獻請明確註明。'));
+$('ai-example-compare').addEventListener('click', () => fillAiQuestion('請逐篇摘要「收藏匣」中的文獻，比較各篇的研究對象、方法、主要結果與差異，標示 PMID；摘要未提及的資訊請註明未提供。'));
 $('ai-example-narrow').addEventListener('click', () => {
   const query = state.lastQuery || $('query').value.trim();
   const question = '請協助縮小目前的文獻搜尋範圍。根據現有搜尋條件與對話，找出可收斂的面向，例如研究對象、核心概念、介入或暴露、比較條件、結果指標、研究設計及時間範圍；只使用適合此主題的面向，不要預設特定疾病、領域或研究類型。先提出 1 至 3 個最關鍵的釐清問題，資訊足夠後再提供更精準的 PubMed 搜尋式，說明各項限制的理由與可能遺漏的文獻；若沒有搜尋主題，先詢問研究方向。' + (query ? `\n目前搜尋條件：${query}` : '');
   fillAiQuestion(question);
 });
-$('ai-example-extend').addEventListener('click', () => fillAiQuestion('請根據「收藏的文獻清單」的摘要，歸納研究方向與可能的研究缺口，提出能幫助我縮小範圍的問題；資訊足夠時，提供適合延伸查找相關文獻的 PubMed 搜尋式。'));
+$('ai-example-extend').addEventListener('click', () => fillAiQuestion('請根據「收藏匣」的摘要，歸納研究方向與可能的研究缺口，提出能幫助我縮小範圍的問題；資訊足夠時，提供適合延伸查找相關文獻的 PubMed 搜尋式。'));
 $('ai-use-collection').addEventListener('change', () => { updateAiScope(); renderAiConversation(); scheduleWorkspaceSave(); });
 $('ai-form').addEventListener('submit', event => { event.preventDefault(); const question = $('ai-question').value.trim(); if (question) askAi(question); });
 $('ai-question').addEventListener('input', () => { if ($('ai-policy-warning').hidden === false) aiPolicyWarning(''); });

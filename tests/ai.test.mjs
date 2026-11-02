@@ -114,7 +114,7 @@ test('analysis explicitly identifies missing abstracts and keeps PMID in the pro
 test('conversation-only analysis excludes collection records and asks for enough details before search', () => {
   const prompt = buildAnalysisPrompt({ query: '', includePapers: false, papers: [{ pmid: '999', title: 'Should not appear', year: '2024', journal: 'J', abstract: 'secret' }], conversation: [{ role: 'user', content: '我想找一種治療' }], question: '請繼續詢問我需要的研究條件' });
   assert.doesNotMatch(prompt, /999|Should not appear|secret/);
-  assert.match(prompt, /不提供收藏的文獻清單/);
+  assert.match(prompt, /不提供收藏匣/);
   assert.match(prompt, /蒐集研究條件/);
   assert.match(prompt, /PubMed 搜尋式/);
 });
