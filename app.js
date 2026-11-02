@@ -726,7 +726,7 @@ const AI_STORAGE = 'litfetch.ai.settings.v1';
 let aiSettings = { provider: 'cgu', services: {} };
 try {
   const saved = JSON.parse(localStorage.getItem(AI_STORAGE) || '{}');
-  if (saved && typeof saved === 'object') aiSettings = { provider: PROVIDERS[saved.provider] ? saved.provider : 'cgu', services: saved.services && typeof saved.services === 'object' ? saved.services : {} };
+  if (saved && typeof saved === 'object') aiSettings = { provider: ['cgu', 'google'].includes(saved.provider) ? saved.provider : 'cgu', services: saved.services && typeof saved.services === 'object' ? saved.services : {} };
 } catch { /* Storage may be blocked; settings can still be used in memory. */ }
 let aiConversation = [];
 let aiAbort = null;
@@ -1223,7 +1223,9 @@ function currentAiConfig() {
   return { provider: $('ai-provider').value, key: $('ai-key').value.trim(), model: $('ai-model').value.trim() };
 }
 function loadAiProvider() {
+  if (!['cgu', 'google'].includes($('ai-provider').value)) $('ai-provider').value = 'cgu';
   const provider = $('ai-provider').value;
+  $('ai-base-url').textContent = PROVIDERS[provider].base;
   const saved = aiSettings.services[provider] || {};
   const rawSavedModel = typeof saved.model === 'string' ? saved.model : '';
   const defaultModel = provider === 'cgu' ? DEFAULT_CGU_MODEL : provider === 'google' ? DEFAULT_GOOGLE_MODEL : '';

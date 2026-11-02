@@ -27,7 +27,7 @@ test('a suggested search analyzes the new results, not previously selected paper
   };
   globalThis.Option = class extends Element { constructor(label, value) { super(); this.textContent = label; this.value = value; } };
   globalThis.window = { confirm: () => true, prompt: () => '自訂搜尋分頁' };
-  globalThis.localStorage = { getItem: key => key === 'litfetch.ai.settings.v1' ? JSON.stringify({ provider: 'openai', services: { openai: { key: 'test-key', model: 'text-model' } } }) : null, setItem() {} };
+  globalThis.localStorage = { getItem: key => key === 'litfetch.ai.settings.v1' ? JSON.stringify({ provider: 'openai', services: { cgu: { key: 'test-key', model: 'text-model' } } }) : null, setItem() {} };
   globalThis.DOMParser = class {
     parseFromString(text) {
       const pmid = text.match(/abstract-(\d+)/)?.[1];
@@ -40,7 +40,7 @@ test('a suggested search analyzes the new results, not previously selected paper
   let blockSearch = false;
   globalThis.fetch = async (url, options = {}) => {
     const parsed = new URL(url);
-    if (parsed.hostname === 'api.openai.com') {
+    if (parsed.hostname === 'air.cgu.edu.tw') {
       const request = JSON.parse(options.body); prompts.push(request.input ?? request.messages?.at(-1)?.content ?? '');
       const text = prompts.length === 1 ? '這個方向可以檢索。\n<pubmed_search>new_topic</pubmed_search>' : '整理新文獻，接著請問研究對象？\n<pubmed_search>fail_topic</pubmed_search>';
       return new Response(JSON.stringify({ output: [{ content: [{ text }] }] }));
@@ -68,6 +68,15 @@ test('a suggested search analyzes the new results, not previously selected paper
     throw new Error('Timed out waiting for UI state');
   };
   await import('../app.js');
+  assert.equal(elements['ai-provider'].value, 'cgu', 'a saved unavailable provider falls back to CGU');
+  assert.equal(elements['ai-base-url'].textContent, 'https://air.cgu.edu.tw/cgullmapi/v1');
+  elements['ai-provider'].value = 'google';
+  elements['ai-provider'].dispatch('change');
+  assert.equal(elements['ai-base-url'].textContent, 'https://generativelanguage.googleapis.com/v1beta/openai');
+  elements['ai-provider'].value = 'xai';
+  elements['ai-provider'].dispatch('change');
+  assert.equal(elements['ai-provider'].value, 'cgu', 'unavailable providers cannot be activated');
+  assert.equal(elements['ai-base-url'].textContent, 'https://air.cgu.edu.tw/cgullmapi/v1');
   elements['ai-example-organize'].dispatch('click');
   assert.match(elements['ai-status'].textContent, /請先.*勾選文獻/);
   assert.equal(prompts.length, 0);
