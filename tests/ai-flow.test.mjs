@@ -184,4 +184,13 @@ test('a suggested search analyzes the new results, not previously selected paper
   assert.equal(elements['abstract-translation-panel'].hidden, false, 'saved translation is restored when the preview reopens');
   assert.equal(elements['abstract-summary-panel'].hidden, false, 'saved AI summary is restored when the preview reopens');
   assert.match(elements['abstract-translation'].textContent, /整理新文獻/);
+  elements['results-list'].dispatch('change', { target: { matches: () => true, dataset: { pmid: '111' }, checked: false } });
+  elements['ai-use-collection'].checked = true;
+  elements['ai-example-narrow'].dispatch('click');
+  assert.equal(elements['ai-example-narrow'].disabled, true, 'narrowing is disabled during analysis');
+  await waitFor(() => prompts.length === 7 && !elements['ai-send'].disabled);
+  assert.equal(elements['ai-example-narrow'].disabled, false);
+  assert.match(prompts[6], /new_topic/, 'narrowing includes the current search');
+  assert.match(prompts[6], /JSON[^\n]*\[\]/, 'narrowing works without selected papers');
+
 });
