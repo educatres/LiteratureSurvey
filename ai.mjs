@@ -110,14 +110,23 @@ export function preferredModel(provider, models) {
     })[0]?.model.id || '';
 }
 
-function extractText(value) {
+function extractText(value, seen = new Set()) {
   if (typeof value === 'string') return value;
-  if (Array.isArray(value)) return value.map(extractText).join('');
-  if (!value || typeof value !== 'object') return '';
-  if (typeof value.text === 'string') return value.text;
-  if (typeof value.output_text === 'string') return value.output_text;
-  if (value.content !== undefined) return extractText(value.content);
-  if (value.message !== undefined) return extractText(value.message);
+  if (Array.isArray(value)) return value.map(item => extractText(item, seen)).join('');
+  if (!value || typeof value !== 'object' || seen.has(value)) return '';
+  seen.add(value);
+  const fields = ['text', 'output_text', 'generated_text', 'answer', 'content', 'message', 'delta', 'response', 'output', 'choices', 'candidates', 'parts', 'data', 'result', 'reasoning_content', 'reasoning'];
+  for (const field of fields) {
+    const text = extractText(value[field], seen);
+    if (text.trim()) return text;
+  }
+  // Some gateways wrap the generated text under a provider-specific field.
+  // Search remaining nested values after the known OpenAI/Google fields.
+  for (const [field, nested] of Object.entries(value)) {
+    if (fields.includes(field)) continue;
+    const text = extractText(nested, seen);
+    if (text.trim()) return text;
+  }
   return '';
 }
 
@@ -137,7 +146,7 @@ export async function generateText({ provider, key, model, prompt, signal, maxOu
   // CGU's Responses endpoint does not necessarily support OpenAI storage settings.
   if (provider === 'cgu' && responses) delete payload.store;
   const body = await requestJson(url, { method: 'POST', headers, body: JSON.stringify(payload) }, signal);
-  const result = google ? extractText(body.candidates?.[0]?.content?.parts) : responses ? extractText(body.output_text || body.output) : extractText(body.choices?.[0]?.message?.content ?? body.choices?.[0]?.message?.reasoning_content);
+  const result = extractText(body);
   if (typeof result !== 'string' || !result.trim()) throw new Error('模型沒有回傳可讀取的文字，請檢查模型是否支援文字生成。');
   return result.trim();
 }

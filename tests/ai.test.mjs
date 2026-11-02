@@ -88,6 +88,23 @@ test('chat responses with structured content are converted to readable text', as
   assert.equal(await generateText({ provider: 'cgu', key: 'k', model: 'gpt-oss:20b', prompt: 'p' }), 'structured reply');
 });
 
+test('chat responses fall back across text, delta, and reasoning fields', async t => {
+  const original = globalThis.fetch;
+  t.after(() => { globalThis.fetch = original; });
+  const responses = [
+    { choices: [{ text: 'completion text' }] },
+    { choices: [{ delta: { content: 'delta text' } }] },
+    { choices: [{ message: { content: '', reasoning_content: 'reasoning text' } }] },
+    { provider_payload: { answer: 'provider-specific text' } }
+  ];
+  let index = 0;
+  globalThis.fetch = async () => new Response(JSON.stringify(responses[index++]));
+  assert.equal(await generateText({ provider: 'cgu', key: 'k', model: 'gpt-oss:20b', prompt: 'p' }), 'completion text');
+  assert.equal(await generateText({ provider: 'cgu', key: 'k', model: 'gpt-oss:20b', prompt: 'p' }), 'delta text');
+  assert.equal(await generateText({ provider: 'cgu', key: 'k', model: 'gpt-oss:20b', prompt: 'p' }), 'reasoning text');
+  assert.equal(await generateText({ provider: 'cgu', key: 'k', model: 'gpt-oss:20b', prompt: 'p' }), 'provider-specific text');
+});
+
 test('analysis explicitly identifies missing abstracts and keeps PMID in the provided context', () => {
   const prompt = buildAnalysisPrompt({ query: 'asthma', papers: [{ pmid: '123', title: 'Example', year: '2024', journal: 'J', abstract: '' }], conversation: [], question: '整理' });
   assert.match(prompt, /123/);
