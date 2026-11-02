@@ -291,3 +291,12 @@ dialog{border:1px solid #d7e5d9;border-radius:16px;box-shadow:0 20px 90px rgba(1
 .ai-policy-warning[hidden]{display:none}
 
 .ai-base-url{grid-column:1 / -1;display:grid;gap:6px;margin:0;font-size:13.2px;color:#456453;overflow-wrap:anywhere}.ai-base-url > span:first-child{font-weight:700}
+
+/* Search rate settings share the scrollable AI settings panel. */
+.ai-settings .settings-divider{margin:22px 0 18px;border:0;border-top:1px solid #dce9dc}
+.search-rate-settings h2{display:flex;align-items:center;gap:7px;margin:0;color:#435f4f;font-size:13.2px;font-weight:720}
+.search-rate-settings .optional-tag{margin-left:2px}
+.search-rate-settings .settings-content{padding-top:15px}
+.search-rate-settings .settings-content>.field-label:first-child{margin-top:0}
+.search-rate-settings input:focus{border-color:#57a07e;outline:2px solid #d8eee0;outline-offset:0}
+.ai-settings-menu .ai-settings{max-height:calc(100dvh - 100px);overscroll-behavior:contain}

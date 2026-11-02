@@ -613,7 +613,7 @@ $('toggle-filters').addEventListener('click', () => {
   } else if (window.innerWidth <= 700) { panel.style.left = ''; panel.style.top = ''; }
 });
 const topbarMenus = [...document.querySelectorAll('.topbar-right details')];
-for (const id of ['close-basket-menu', 'close-search-settings', 'close-ai-settings']) {
+for (const id of ['close-basket-menu', 'close-ai-settings']) {
   const button = $(id);
   button.addEventListener('click', () => {
     const menu = button.closest('details');
