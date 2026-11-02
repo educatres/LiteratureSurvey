@@ -1,6 +1,8 @@
 // AI providers are called directly from the user's browser. Never log keys or prompts.
 export const DEFAULT_CGU_MODEL = 'gpt-oss:20b';
-export const DEFAULT_GOOGLE_MODEL = 'gemini-flash-latest';
+export const GOOGLE_AI_STUDIO_BASE = 'https://generativelanguage.googleapis.com/v1beta/openai';
+export const GOOGLE_AI_STUDIO_LEGACY_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+export const DEFAULT_GOOGLE_MODEL = 'gemini-flash-lite-latest';
 export const CGU_MODEL_IDS = Object.freeze(['gemma-4-26b-a4b-it', DEFAULT_CGU_MODEL, 'gpt-oss-120b']);
 const CGU_MODEL_ID_SET = new Set(CGU_MODEL_IDS);
 
@@ -8,7 +10,7 @@ export const PROVIDERS = {
   cgu: { label: 'CGU', base: 'https://air.cgu.edu.tw/cgullmapi/v1' },
   openai: { label: 'OpenAI', base: 'https://api.openai.com/v1' },
   xai: { label: 'Grok（xAI）', base: 'https://api.x.ai/v1' },
-  google: { label: 'Google AI Studio', base: 'https://generativelanguage.googleapis.com/v1beta' }
+  google: { label: 'Google AI Studio', base: GOOGLE_AI_STUDIO_BASE }
 };
 
 const POLICY_WARNING = '此訊息未送出。此對話僅處理文獻查找、文獻整理、文獻分析與文獻數據整理；不接受改變 AI 身分、要求系統提示詞或內部指令，也不處理其他用途。請改以研究問題、文獻、摘要、PMID、DOI 或研究資料欄位描述。';
@@ -50,40 +52,71 @@ export function validateChatQuestion(question) {
 
 export { POLICY_WARNING };
 
-async function requestJson(url, options, signal) {
+const GOOGLE_OPENAI_ENDPOINT = /\/openai\/?$/i;
+
+function isGoogleAiStudioEndpoint(base) { return GOOGLE_OPENAI_ENDPOINT.test(String(base)); }
+function cleanBase(base) { return String(base || '').replace(/\/$/, ''); }
+function authHeaders(key) { return { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }; }
+function isTextModel(model) {
+  const label = `${model.id || ''} ${model.label || ''}`.toLowerCase();
+  return label.includes('gemini') || label.includes('gemma') || label.includes('luna')
+    || label.includes('nemotron') || label.includes('mistral') || label.includes('gpt-oss');
+}
+
+async function requestJson(url, options = {}, signal, timeoutMs = 30000) {
+  const controller = new AbortController();
+  let timedOut = false;
+  const abortFromCaller = () => controller.abort();
+  if (signal?.aborted) controller.abort();
+  else signal?.addEventListener('abort', abortFromCaller, { once: true });
+  const timer = setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs);
   let response;
-  try { response = await fetch(url, { ...options, signal, credentials: 'omit' }); }
-  catch (error) {
-    if (error.name === 'AbortError') throw error;
-    throw new Error('無法連線。請檢查網路、服務狀態或瀏覽器跨站連線（CORS）限制。');
+  try {
+    response = await fetch(url, { ...options, signal: controller.signal, credentials: 'omit' });
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      if (!timedOut) throw error;
+    throw new Error('\u7121\u6cd5\u9023\u7dda\u5230\u0041\u0049\u0020\u670d\u52d9\u3001\u8acb\u6aa2\u67e5\u7db2\u8def\u9023\u7dda\u8207\u8def\u8207\u700f\u5668\u0043\u004f\u0052\u0053\u8a2d\u5b9a\u3002');
+    }
+    throw new Error('\u7121\u6cd5\u9023\u7dda\u5230\u0041\u0049\u0020\u670d\u52d9\u3001\u8acb\u6aa2\u67e5\u7db2\u8def\u9023\u7dda\u8207\u8def\u8207\u700f\u5668\u0043\u004f\u0052\u0053\u8a2d\u5b9a\u3002');
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', abortFromCaller);
   }
-  let body;
-  try { body = await response.json(); } catch { throw new Error(`服務回傳無法解析的資料（HTTP ${response.status}）。`); }
-  if (!response.ok) throw new Error(`HTTP ${response.status}：${body?.error?.message || body?.message || '請檢查 Key、模型與額度。'}`);
+  const raw = await response.text();
+  let body = {};
+  try { body = raw ? JSON.parse(raw) : {}; } catch { body = { raw }; }
+  if (!response.ok) {
+    const detail = body?.error?.message || body?.message || body?.raw || `HTTP ${response.status}`;
+    throw new Error(`HTTP ${response.status}: ${detail}`);
+  }
   return body;
 }
 
 export async function listModels(provider, key, signal) {
   const service = PROVIDERS[provider];
-  if (!service || !key.trim()) throw new Error('請選擇服務並輸入 API Key。');
-  const google = provider === 'google';
-  const headers = google ? { 'x-goog-api-key': key } : { Authorization: `Bearer ${key}` };
-  const models = [];
-  let pageToken = '';
-  do {
-    const url = new URL(`${service.base}/models`);
-    if (pageToken) url.searchParams.set('pageToken', pageToken);
-    const body = await requestJson(url, { headers }, signal);
-    const rows = google ? body.models : (Array.isArray(body) ? body : body.data || body.models);
-    if (!Array.isArray(rows)) throw new Error('服務沒有回傳可辨識的模型清單。');
-    for (const row of rows) {
-      if (google && !row.supportedGenerationMethods?.includes('generateContent')) continue;
-      const id = String(row.id || row.name || '').replace(/^models\//, '');
-      if (id) models.push({ id, label: row.displayName || id });
-    }
-    pageToken = google ? body.nextPageToken || '' : '';
-  } while (pageToken);
-  const uniqueModels = [...new Map(models.map(model => [model.id, model])).values()];
+  if (!service || !key.trim()) throw new Error('\u8acb\u5148\u9078\u64c7\u0041\u0049\u670d\u52d9\u4e26\u8f38\u5165\u0041\u0050\u0049\u0020\u004b\u0065\u0079\u3002');
+  const base = cleanBase(service.base);
+  let body;
+  if (provider === 'google' && !isGoogleAiStudioEndpoint(base)) {
+    const url = `${base}/models?key=${encodeURIComponent(key)}`;
+    body = await requestJson(url, { headers: { 'Content-Type': 'application/json' } }, signal);
+  } else {
+    const headers = provider === 'google'
+      ? authHeaders(key)
+      : { Authorization: `Bearer ${key}` };
+    body = await requestJson(`${base}/models`, { headers }, signal);
+  }
+  const rows = Array.isArray(body) ? body : body?.data ?? body?.models ?? [];
+  if (!Array.isArray(rows)) throw new Error('\u670d\u52d9\u56de\u50b3\u7684\u6a21\u578b\u6e05\u55ae\u683c\u5f0f\u7121\u6cd5\u8fa8\u8b58\u3002');
+  const models = rows.map(row => ({
+    id: String(row.id || row.name || '').replace(/^models\//, ''),
+    label: row.displayName || row.name || row.id || ''
+  })).filter(model => model.id);
+  const textModels = provider === 'google' && !isGoogleAiStudioEndpoint(base)
+    ? models.filter((_, index) => rows[index]?.supportedGenerationMethods?.includes('generateContent'))
+    : provider === 'google' ? models.filter(isTextModel) : models;
+  const uniqueModels = [...new Map(textModels.map(model => [model.id, model])).values()];
   return provider === 'cgu' ? uniqueModels.filter(model => CGU_MODEL_ID_SET.has(model.id)) : uniqueModels;
 }
 
@@ -97,17 +130,23 @@ function modelVersion(model) {
 
 export function preferredModel(provider, models) {
   if (provider === 'cgu' && models.some(model => model.id === DEFAULT_CGU_MODEL)) return DEFAULT_CGU_MODEL;
-  const pattern = provider === 'cgu' ? /luna/i : provider === 'google' ? /flash[- ]?lite/i : null;
-  if (!pattern) return '';
-  return models
+  if (provider !== 'cgu' && provider !== 'google') return '';
+  const candidates = models.filter(model => provider === 'google'
+    ? /flash-lite/i.test(`${model.id || ''} ${model.label || ''}`)
+    : /luna/i.test(`${model.id || ''} ${model.label || ''}`));
+  if (!candidates.length) return '';
+  if (provider === 'google') {
+    const latest = candidates.find(model => /flash-lite-latest/i.test(model.id));
+    if (latest) return latest.id;
+  }
+  return candidates
     .map((model, index) => ({ model, index, ranking: modelVersion(model) }))
-    .filter(item => pattern.test(`${item.model.id || ''} ${item.model.label || ''}`))
     .sort((a, b) => {
       for (const index of [0, 1]) if (a.ranking.version[index] !== b.ranking.version[index]) return b.ranking.version[index] - a.ranking.version[index];
       if (a.ranking.stable !== b.ranking.stable) return Number(b.ranking.stable) - Number(a.ranking.stable);
       for (const index of [0, 1, 2]) if (a.ranking.date[index] !== b.ranking.date[index]) return b.ranking.date[index] - a.ranking.date[index];
       return a.index - b.index;
-    })[0]?.model.id || '';
+    })[0].model.id;
 }
 
 function extractText(value, seen = new Set()) {
@@ -132,22 +171,42 @@ function extractText(value, seen = new Set()) {
 
 export async function generateText({ provider, key, model, prompt, signal, maxOutputTokens }) {
   const service = PROVIDERS[provider];
-  if (!service || !key.trim() || !model.trim()) throw new Error('請先設定 API Key 並選擇或輸入模型。');
-  const google = provider === 'google';
-  const responses = provider === 'openai' || (provider === 'cgu' && /luna/i.test(model));
-  const url = google ? `${service.base}/models/${encodeURIComponent(model)}:generateContent` : `${service.base}/${responses ? 'responses' : 'chat/completions'}`;
-  const headers = google ? { 'x-goog-api-key': key, 'Content-Type': 'application/json' } : { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' };
-  const payload = google ? { contents: [{ role: 'user', parts: [{ text: prompt }] }] } : responses ? { model, input: prompt, store: false } : { model, messages: [{ role: 'user', content: prompt }] };
-  if (Number.isFinite(maxOutputTokens) && maxOutputTokens > 0) {
-    if (google) payload.generationConfig = { maxOutputTokens, temperature: 0 };
-    else if (responses) payload.max_output_tokens = maxOutputTokens;
-    else payload.max_tokens = maxOutputTokens;
+  if (!service || !key.trim() || !model.trim()) throw new Error('\u8acb\u5148\u8f38\u5165\u0041\u0050\u0049\u0020\u004b\u0065\u0079\u4e26\u9078\u64c7\u6a21\u578b\u3002');
+  const base = cleanBase(service.base);
+  const googleOpenAi = provider === 'google' && isGoogleAiStudioEndpoint(base);
+  const outputLimit = Number.isFinite(maxOutputTokens) && maxOutputTokens > 0 ? maxOutputTokens : 4096;
+  let url;
+  let headers;
+  let payload;
+  let timeoutMs = 120000;
+
+  if (provider === 'google' && !googleOpenAi) {
+    url = `${base}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+    headers = { 'Content-Type': 'application/json' };
+    payload = {
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: outputLimit, temperature: 0 }
+    };
+  } else if (provider === 'cgu' && /luna/i.test(model)) {
+    url = `${base}/responses`;
+    headers = authHeaders(key);
+    payload = { model, input: prompt, max_output_tokens: outputLimit, reasoning: { effort: 'medium' } };
+  } else {
+    url = `${base}/chat/completions`;
+    headers = authHeaders(key);
+    payload = { model, messages: [{ role: 'user', content: prompt }] };
+    if (provider === 'cgu') payload.max_completion_tokens = outputLimit;
+    else {
+      payload.temperature = 0.1;
+      if (Number.isFinite(maxOutputTokens) && maxOutputTokens > 0) payload.max_tokens = maxOutputTokens;
+    }
   }
-  // CGU's Responses endpoint does not necessarily support OpenAI storage settings.
-  if (provider === 'cgu' && responses) delete payload.store;
-  const body = await requestJson(url, { method: 'POST', headers, body: JSON.stringify(payload) }, signal);
+
+  const body = await requestJson(url, {
+    method: 'POST', headers, body: JSON.stringify(payload)
+  }, signal, timeoutMs);
   const result = extractText(body);
-  if (typeof result !== 'string' || !result.trim()) throw new Error('模型沒有回傳可讀取的文字，請檢查模型是否支援文字生成。');
+  if (typeof result !== 'string' || !result.trim()) throw new Error('\u6a21\u578b\u6c92\u6709\u56de\u50b3\u53ef\u8b80\u53d6\u7684\u6587\u5b57\u3001\u8acb\u6aa2\u67e5\u6a21\u578b\u662f\u5426\u652f\u6301\u6587\u5b57\u751f\u6210\u3002');
   return result.trim();
 }
 

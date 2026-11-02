@@ -41,7 +41,7 @@ test('a suggested search analyzes the new results, not previously selected paper
   globalThis.fetch = async (url, options = {}) => {
     const parsed = new URL(url);
     if (parsed.hostname === 'api.openai.com') {
-      prompts.push(JSON.parse(options.body).input);
+      const request = JSON.parse(options.body); prompts.push(request.input ?? request.messages?.at(-1)?.content ?? '');
       const text = prompts.length === 1 ? '這個方向可以檢索。\n<pubmed_search>new_topic</pubmed_search>' : '整理新文獻，接著請問研究對象？\n<pubmed_search>fail_topic</pubmed_search>';
       return new Response(JSON.stringify({ output: [{ content: [{ text }] }] }));
     }

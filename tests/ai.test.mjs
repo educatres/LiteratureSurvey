@@ -19,7 +19,7 @@ test('chat policy blocks prompt injection, identity changes, and non-literature 
 
 test('preferred models choose the newest Luna or Flash Lite variant', () => {
   assert.equal(DEFAULT_CGU_MODEL, 'gpt-oss:20b');
-  assert.equal(DEFAULT_GOOGLE_MODEL, 'gemini-flash-latest');
+  assert.equal(DEFAULT_GOOGLE_MODEL, 'gemini-flash-lite-latest');
   const models = [
     { id: 'luna-2.5-8b', label: 'Luna 2.5' },
     { id: 'luna-3.1-8b', label: 'Luna 3.1' },
@@ -32,19 +32,18 @@ test('preferred models choose the newest Luna or Flash Lite variant', () => {
   assert.equal(preferredModel('cgu', [{ id: 'luna-3.1-8b' }, { id: DEFAULT_CGU_MODEL }]), DEFAULT_CGU_MODEL);
 });
 
-test('Google models are paginated, filtered for text generation, and authenticated via headers', async t => {
+test('Google AI Studio models use its OpenAI-compatible endpoint and filter non-text models', async t => {
   const original = globalThis.fetch;
   t.after(() => { globalThis.fetch = original; });
   const calls = [];
   globalThis.fetch = async (url, options) => {
     calls.push({ url: String(url), options });
-    return new Response(JSON.stringify(calls.length === 1 ? { models: [{ name: 'models/gemini-a', supportedGenerationMethods: ['generateContent'] }, { name: 'models/embed', supportedGenerationMethods: ['embedContent'] }], nextPageToken: 'next' } : { models: [{ name: 'models/gemini-b', supportedGenerationMethods: ['generateContent'] }] }));
+    return new Response(JSON.stringify({ data: [{ id: 'gemini-a' }, { id: 'embedding-001' }] }));
   };
   const models = await listModels('google', 'secret');
-  assert.deepEqual(models.map(m => m.id), ['gemini-a', 'gemini-b']);
-  assert.equal(calls[0].options.headers['x-goog-api-key'], 'secret');
+  assert.deepEqual(models.map(m => m.id), ['gemini-a']);
+  assert.equal(calls[0].options.headers.Authorization, 'Bearer secret');
   assert.ok(!calls[0].url.includes('secret'));
-  assert.ok(calls[1].url.includes('pageToken=next'));
 });
 
 test('CGU model lists only expose the supported model choices', async t => {
@@ -67,18 +66,18 @@ test('providers use their own generation routes and extract returned text', asyn
   const calls = [];
   globalThis.fetch = async (url, options) => {
     calls.push({ url, options, body: JSON.parse(options.body) });
-    const result = String(url).includes('generateContent') ? { candidates: [{ content: { parts: [{ text: 'google' }] } }] } : String(url).endsWith('/responses') ? { output: [{ content: [{ text: 'responses' }] }] } : { choices: [{ message: { content: 'chat' } }] };
+    const result = String(url).includes('generativelanguage.googleapis.com') ? { choices: [{ message: { content: 'google' } }] } : { choices: [{ message: { content: 'chat' } }] };
     return new Response(JSON.stringify(result));
   };
-  assert.equal(await generateText({ provider: 'openai', key: 'k', model: 'm', prompt: 'p' }), 'responses');
+  assert.equal(await generateText({ provider: 'openai', key: 'k', model: 'm', prompt: 'p' }), 'chat');
   assert.equal(await generateText({ provider: 'cgu', key: 'k', model: 'gpt-oss-120b', prompt: 'p' }), 'chat');
   assert.equal(await generateText({ provider: 'xai', key: 'k', model: 'grok', prompt: 'p' }), 'chat');
   assert.equal(await generateText({ provider: 'google', key: 'k', model: 'gemini', prompt: 'p', maxOutputTokens: 8 }), 'google');
-  assert.equal(calls[0].body.store, false);
+  assert.equal(calls[0].body.messages[0].content, 'p');
   assert.equal(calls[1].url, 'https://air.cgu.edu.tw/cgullmapi/v1/chat/completions');
   assert.equal(calls[2].url, 'https://api.x.ai/v1/chat/completions');
-  assert.equal(calls[3].options.headers['x-goog-api-key'], 'k');
-  assert.deepEqual(calls[3].body.generationConfig, { maxOutputTokens: 8, temperature: 0 });
+  assert.equal(calls[3].options.headers.Authorization, 'Bearer k');
+  assert.equal(calls[3].body.max_tokens, 8);
 });
 
 test('chat responses with structured content are converted to readable text', async t => {

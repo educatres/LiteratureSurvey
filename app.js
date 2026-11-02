@@ -3,7 +3,7 @@ import { renderMarkdown } from './markdown.mjs';
 import { encodeWorkspace, decodeWorkspace, encodeProjectIndex, decodeProjectIndex } from './workspace.mjs';
 import { encodeProjectBackup, decodeProjectBackup, storeImportedProject, PROJECT_INDEX_STORAGE, PROJECT_WORKSPACE_PREFIX } from './project-backup.mjs';
 import { PAGE_SIZE, MAX_EXPORT, buildPubmedQuery, sortPapers, normalizeSummary, metadataCsv, fileStem, chunks } from './domain.mjs';
-import { PROVIDERS, CGU_MODEL_IDS, DEFAULT_CGU_MODEL, DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion, validateChatQuestion } from './ai.mjs?v=20261102-16';
+import { PROVIDERS, CGU_MODEL_IDS, DEFAULT_CGU_MODEL, DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion, validateChatQuestion } from './ai.mjs?v=20261102-17';
 
 const NCBI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
 const EPMC = 'https://www.ebi.ac.uk/europepmc/webservices/rest';
@@ -1225,8 +1225,10 @@ function currentAiConfig() {
 function loadAiProvider() {
   const provider = $('ai-provider').value;
   const saved = aiSettings.services[provider] || {};
-  const savedModel = typeof saved.model === 'string' ? saved.model : '';
+  const rawSavedModel = typeof saved.model === 'string' ? saved.model : '';
   const defaultModel = provider === 'cgu' ? DEFAULT_CGU_MODEL : provider === 'google' ? DEFAULT_GOOGLE_MODEL : '';
+  // Migrate the earlier Google native-endpoint alias to the reference project's default.
+  const savedModel = provider === 'google' && rawSavedModel === 'gemini-flash-latest' ? '' : rawSavedModel;
   const isNewDefaultSelection = Boolean(defaultModel) && !savedModel;
   $('ai-key').value = typeof saved.key === 'string' ? saved.key : '';
   $('ai-model').value = savedModel || defaultModel;
@@ -1234,7 +1236,7 @@ function loadAiProvider() {
     $('ai-model-list').replaceChildren(...CGU_MODEL_IDS.map(model => new Option(model, model)));
     $('ai-model-list').value = savedModel ? (CGU_MODEL_IDS.includes(savedModel) ? savedModel : '') : DEFAULT_CGU_MODEL;
   } else if (isNewDefaultSelection) {
-    const label = provider === 'google' ? `Gemini Flash Latest (${DEFAULT_GOOGLE_MODEL})` : DEFAULT_CGU_MODEL;
+    const label = provider === 'google' ? `Gemini Flash Lite Latest (${DEFAULT_GOOGLE_MODEL})` : DEFAULT_CGU_MODEL;
     $('ai-model-list').replaceChildren(new Option(label, defaultModel));
     $('ai-model-list').value = defaultModel;
   } else {
@@ -1470,7 +1472,7 @@ $('ai-test').addEventListener('click', async () => {
     const shouldPreferDefaultModel = Boolean(defaultModel) && model === defaultModel;
     const modelOptions = models.map(item => new Option(item.label === item.id ? item.id : `${item.label}（${item.id}）`, item.id));
     if (shouldPreferDefaultModel && !models.some(item => item.id === defaultModel)) {
-      const label = provider === 'google' ? `Gemini Flash Latest (${DEFAULT_GOOGLE_MODEL})` : DEFAULT_CGU_MODEL;
+      const label = provider === 'google' ? `Gemini Flash Lite Latest (${DEFAULT_GOOGLE_MODEL})` : DEFAULT_CGU_MODEL;
       modelOptions.unshift(new Option(label, defaultModel));
     }
     $('ai-model-list').replaceChildren(new Option('選擇模型', ''), ...modelOptions);
