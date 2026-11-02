@@ -235,7 +235,6 @@ function renderResults() {
   } else {
     list.innerHTML = state.items.map((p, index) => {
       const selected = state.selected.has(p.pmid);
-      const authors = p.authors.slice(0, 4).join(', ') + (p.authors.length > 4 ? ' et al.' : '');
       const articleType = p.type.find(x => /review|trial|meta-analysis/i.test(x)) || '';
       const cachedAbstract = state.abstractCache.get(p.pmid) || '';
       const assisted = state.abstractAssistCache.get(p.pmid) || {};
@@ -243,8 +242,8 @@ function renderResults() {
       const assistBadges = `${cachedAbstract ? `<span class="paper-ai-marker"><button type="button" class="paper-ai-badge paper-abstract-badge" data-preview="${p.pmid}" aria-label="查看已保存的摘要">摘要</button><span class="paper-ai-tooltip" role="tooltip"><strong>摘要</strong>${escapeHtml(cachedAbstract)}</span></span>` : ''}${assisted.translation ? `<span class="paper-ai-marker"><button type="button" class="paper-ai-badge paper-translation-badge" data-preview="${p.pmid}" aria-label="查看已保存的中文翻譯">譯</button><span class="paper-ai-tooltip" role="tooltip"><strong>中文翻譯</strong>${tooltipHtml(assisted.translation)}</span></span>` : ''}${assisted.summary ? `<span class="paper-ai-marker"><button type="button" class="paper-ai-badge paper-summary-badge" data-preview="${p.pmid}" aria-label="查看已保存的 AI 摘要">AI</button><span class="paper-ai-tooltip" role="tooltip"><strong>AI 摘要</strong>${tooltipHtml(assisted.summary)}</span></span>` : ''}`;
       return `<article class="paper-card${selected ? ' is-selected' : ''}">
         <div class="paper-index"><span class="paper-number">${String(state.page * getPageSize() + index + 1).padStart(3, '0')}</span><input type="checkbox" class="paper-checkbox" aria-label="選取 ${escapeHtml(p.title)}" data-pmid="${p.pmid}" ${selected ? 'checked' : ''}></div>
-        <div class="paper-main"><div class="paper-top"><div class="paper-pills">${assistBadges}${p.pmcid ? '<span class="pill pmc">PMC 收錄</span>' : ''}${articleType ? `<span class="pill type">${escapeHtml(articleType)}</span>` : ''}</div></div>
-        <h3 class="paper-title">${escapeHtml(p.title)}</h3><p class="paper-authors">${escapeHtml(authors || '未提供作者')}</p><div class="paper-publication"><span>${escapeHtml(p.journal)}</span><span>${escapeHtml(p.date || p.year)}</span><span>PMID ${p.pmid}</span></div>
+        <div class="paper-main"><div class="paper-top"><div class="paper-pills">${assistBadges}${p.pmcid ? '<span class="pill pmc">PMC 收錄</span>' : ''}${articleType ? `<span class="pill type">${escapeHtml(articleType)}</span>` : ''}</div><div class="paper-publication"><span>${escapeHtml(p.journal)}</span><span>${escapeHtml(p.year || p.date)}</span><span>PMID ${p.pmid}</span></div></div>
+        <h3 class="paper-title">${escapeHtml(p.title)}</h3>
         <div class="paper-footer"><button type="button" data-preview="${p.pmid}">查看摘要 ↗</button><a href="https://pubmed.ncbi.nlm.nih.gov/${p.pmid}/" target="_blank" rel="noopener noreferrer">PubMed ↗</a>${p.pmcid ? `<a href="https://pmc.ncbi.nlm.nih.gov/articles/${p.pmcid}/" target="_blank" rel="noopener noreferrer">PMC 全文頁 ↗</a>` : ''}${p.doi ? `<a class="doi" href="https://doi.org/${encodeURIComponent(p.doi)}" target="_blank" rel="noopener noreferrer">DOI ↗</a>` : ''}</div></div></article>`;
     }).join('');
   }
