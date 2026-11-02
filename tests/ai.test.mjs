@@ -73,11 +73,12 @@ test('providers use their own generation routes and extract returned text', asyn
   assert.equal(await generateText({ provider: 'openai', key: 'k', model: 'm', prompt: 'p' }), 'responses');
   assert.equal(await generateText({ provider: 'cgu', key: 'k', model: 'gpt-oss-120b', prompt: 'p' }), 'chat');
   assert.equal(await generateText({ provider: 'xai', key: 'k', model: 'grok', prompt: 'p' }), 'chat');
-  assert.equal(await generateText({ provider: 'google', key: 'k', model: 'gemini', prompt: 'p' }), 'google');
+  assert.equal(await generateText({ provider: 'google', key: 'k', model: 'gemini', prompt: 'p', maxOutputTokens: 8 }), 'google');
   assert.equal(calls[0].body.store, false);
   assert.equal(calls[1].url, 'https://air.cgu.edu.tw/cgullmapi/v1/chat/completions');
   assert.equal(calls[2].url, 'https://api.x.ai/v1/chat/completions');
   assert.equal(calls[3].options.headers['x-goog-api-key'], 'k');
+  assert.deepEqual(calls[3].body.generationConfig, { maxOutputTokens: 8, temperature: 0 });
 });
 
 test('analysis explicitly identifies missing abstracts and keeps PMID in the provided context', () => {

@@ -110,7 +110,7 @@ export function preferredModel(provider, models) {
     })[0]?.model.id || '';
 }
 
-export async function generateText({ provider, key, model, prompt, signal }) {
+export async function generateText({ provider, key, model, prompt, signal, maxOutputTokens }) {
   const service = PROVIDERS[provider];
   if (!service || !key.trim() || !model.trim()) throw new Error('請先設定 API Key 並選擇或輸入模型。');
   const google = provider === 'google';
@@ -118,6 +118,11 @@ export async function generateText({ provider, key, model, prompt, signal }) {
   const url = google ? `${service.base}/models/${encodeURIComponent(model)}:generateContent` : `${service.base}/${responses ? 'responses' : 'chat/completions'}`;
   const headers = google ? { 'x-goog-api-key': key, 'Content-Type': 'application/json' } : { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' };
   const payload = google ? { contents: [{ role: 'user', parts: [{ text: prompt }] }] } : responses ? { model, input: prompt, store: false } : { model, messages: [{ role: 'user', content: prompt }] };
+  if (Number.isFinite(maxOutputTokens) && maxOutputTokens > 0) {
+    if (google) payload.generationConfig = { maxOutputTokens, temperature: 0 };
+    else if (responses) payload.max_output_tokens = maxOutputTokens;
+    else payload.max_tokens = maxOutputTokens;
+  }
   // CGU's Responses endpoint does not necessarily support OpenAI storage settings.
   if (provider === 'cgu' && responses) delete payload.store;
   const body = await requestJson(url, { method: 'POST', headers, body: JSON.stringify(payload) }, signal);
