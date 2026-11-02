@@ -1253,7 +1253,7 @@ function updateAiScope() {
     return;
   }
   const count = state.selected.size;
-  $('ai-scope').textContent = count ? `分析範圍：已選取文獻 ${count} 篇；送出前會取得可用摘要。` : '尚未收藏文獻：請先勾選搜尋結果；或取消勾選以透過多輪對話擬定搜尋條件。';
+  $('ai-scope').textContent = count ? '' : '尚未收藏文獻：請先勾選搜尋結果；或取消勾選以透過多輪對話擬定搜尋條件。';
 }
 function renderAiConversation() {
   ensureConversationIds();
