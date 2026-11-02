@@ -81,6 +81,13 @@ test('providers use their own generation routes and extract returned text', asyn
   assert.deepEqual(calls[3].body.generationConfig, { maxOutputTokens: 8, temperature: 0 });
 });
 
+test('chat responses with structured content are converted to readable text', async t => {
+  const original = globalThis.fetch;
+  t.after(() => { globalThis.fetch = original; });
+  globalThis.fetch = async () => new Response(JSON.stringify({ choices: [{ message: { content: [{ type: 'text', text: 'structured ' }, { type: 'text', text: 'reply' }] } }] }));
+  assert.equal(await generateText({ provider: 'cgu', key: 'k', model: 'gpt-oss:20b', prompt: 'p' }), 'structured reply');
+});
+
 test('analysis explicitly identifies missing abstracts and keeps PMID in the provided context', () => {
   const prompt = buildAnalysisPrompt({ query: 'asthma', papers: [{ pmid: '123', title: 'Example', year: '2024', journal: 'J', abstract: '' }], conversation: [], question: '整理' });
   assert.match(prompt, /123/);

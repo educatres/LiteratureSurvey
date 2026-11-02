@@ -3,7 +3,7 @@ import { renderMarkdown } from './markdown.mjs';
 import { encodeWorkspace, decodeWorkspace, encodeProjectIndex, decodeProjectIndex } from './workspace.mjs';
 import { encodeProjectBackup, decodeProjectBackup, storeImportedProject, PROJECT_INDEX_STORAGE, PROJECT_WORKSPACE_PREFIX } from './project-backup.mjs';
 import { PAGE_SIZE, MAX_EXPORT, buildPubmedQuery, sortPapers, normalizeSummary, metadataCsv, fileStem, chunks } from './domain.mjs';
-import { PROVIDERS, CGU_MODEL_IDS, DEFAULT_CGU_MODEL, DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion, validateChatQuestion } from './ai.mjs?v=20261102-13';
+import { PROVIDERS, CGU_MODEL_IDS, DEFAULT_CGU_MODEL, DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion, validateChatQuestion } from './ai.mjs?v=20261102-14';
 
 const NCBI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
 const EPMC = 'https://www.ebi.ac.uk/europepmc/webservices/rest';

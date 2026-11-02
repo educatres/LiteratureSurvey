@@ -110,6 +110,17 @@ export function preferredModel(provider, models) {
     })[0]?.model.id || '';
 }
 
+function extractText(value) {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.map(extractText).join('');
+  if (!value || typeof value !== 'object') return '';
+  if (typeof value.text === 'string') return value.text;
+  if (typeof value.output_text === 'string') return value.output_text;
+  if (value.content !== undefined) return extractText(value.content);
+  if (value.message !== undefined) return extractText(value.message);
+  return '';
+}
+
 export async function generateText({ provider, key, model, prompt, signal, maxOutputTokens }) {
   const service = PROVIDERS[provider];
   if (!service || !key.trim() || !model.trim()) throw new Error('請先設定 API Key 並選擇或輸入模型。');
@@ -126,7 +137,7 @@ export async function generateText({ provider, key, model, prompt, signal, maxOu
   // CGU's Responses endpoint does not necessarily support OpenAI storage settings.
   if (provider === 'cgu' && responses) delete payload.store;
   const body = await requestJson(url, { method: 'POST', headers, body: JSON.stringify(payload) }, signal);
-  const result = google ? body.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') : responses ? (body.output_text || body.output?.flatMap(item => item.content || []).map(part => part.text || '').join('')) : body.choices?.[0]?.message?.content;
+  const result = google ? extractText(body.candidates?.[0]?.content?.parts) : responses ? extractText(body.output_text || body.output) : extractText(body.choices?.[0]?.message?.content ?? body.choices?.[0]?.message?.reasoning_content);
   if (typeof result !== 'string' || !result.trim()) throw new Error('模型沒有回傳可讀取的文字，請檢查模型是否支援文字生成。');
   return result.trim();
 }
