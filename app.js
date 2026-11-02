@@ -409,10 +409,10 @@ async function generateAbstractAssist(kind) {
   if (!text || abstractAiAbort) return;
   const config = currentAiConfig();
   if (!config.key || !config.model) {
-    const notice = '請先關閉摘要視窗，開啟「連接你的 AI」，輸入 API Key 並選擇或輸入模型。';
+    const notice = '請先關閉摘要視窗，開啟「連接AI」，輸入 API Key 並選擇或輸入模型。';
     if (kind === 'translation') abstractView.translation = notice; else abstractView.summary = notice;
     renderAbstractView();
-    aiMessage('請先開啟「連接你的 AI」，輸入 API Key 並選擇或輸入模型。', true);
+    aiMessage('請先開啟「連接AI」，輸入 API Key 並選擇或輸入模型。', true);
     $('ai-settings-menu').open = true; $('ai-settings-toggle').setAttribute('aria-expanded', 'true'); return;
   }
   const controller = new AbortController(); abstractAiAbort = controller;
@@ -1344,7 +1344,7 @@ function setAiBusy(busy) {
 }
 function requireAiConfig() {
   const config = currentAiConfig();
-  if (!config.key || !config.model) { aiMessage('請先開啟「連接你的 AI」，輸入 API Key 並選擇或輸入模型。', true); $('ai-settings-menu').open = true; $('ai-settings-toggle').setAttribute('aria-expanded', 'true'); return null; }
+  if (!config.key || !config.model) { aiMessage('請先開啟「連接AI」，輸入 API Key 並選擇或輸入模型。', true); $('ai-settings-menu').open = true; $('ai-settings-toggle').setAttribute('aria-expanded', 'true'); return null; }
   return config;
 }
 async function runAiAnalysis(question, { papers, query, config, controller, hideQuestion = false, papersSource = '收藏的文獻清單' }) {
