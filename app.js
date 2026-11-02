@@ -8,6 +8,7 @@ import { PROVIDERS, CGU_MODEL_IDS, DEFAULT_CGU_MODEL, DEFAULT_GOOGLE_MODEL, list
 const NCBI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
 const EPMC = 'https://www.ebi.ac.uk/europepmc/webservices/rest';
 const MAX_ZIP_CONTENT = 120 * 1024 * 1024;
+const AI_RESPONSE_TEST_PROMPT = '\u8acb\u53ea\u56de\u8986\u300cOK\u300d';
 const DEFAULT_ANALYSIS_QUESTION = '請根據目前提供的文獻摘要整理研究主題、主要發現與差異，標示 PMID，並提出能協助我縮小研究範圍的問題。';
 const $ = id => document.getElementById(id);
 const PAGE_SIZE_OPTIONS = new Set([20, 50, 100]);
@@ -730,6 +731,7 @@ try {
 let aiConversation = [];
 let aiAbort = null;
 let aiTestAbort = null;
+let aiResponseTestAbort = null;
 let conversationSequence = 0;
 let activeChatId = 'chat-1';
 let chatSequence = 1;
@@ -1440,7 +1442,7 @@ for (const id of WORKSPACE_FIELDS) {
   $(id).addEventListener('change', scheduleWorkspaceSave);
 }
 globalThis.addEventListener?.('pagehide', () => { if (saveTimer) persistWorkspace(); });
-$('ai-provider').addEventListener('change', () => { aiTestAbort?.abort(); loadAiProvider(); });
+$('ai-provider').addEventListener('change', () => { aiTestAbort?.abort(); aiResponseTestAbort?.abort(); loadAiProvider(); });
 $('ai-model-list').addEventListener('change', () => { if ($('ai-model-list').value) $('ai-model').value = $('ai-model-list').value; });
 $('ai-save').addEventListener('click', () => {
   const { provider, key, model } = currentAiConfig();
@@ -1450,6 +1452,7 @@ $('ai-save').addEventListener('click', () => {
 });
 $('ai-clear').addEventListener('click', () => {
   aiTestAbort?.abort();
+  aiResponseTestAbort?.abort();
   const provider = $('ai-provider').value;
   delete aiSettings.services[provider]; $('ai-key').value = ''; $('ai-model').value = '';
   $('ai-model-list').replaceChildren(new Option('請先讀取模型', ''));
@@ -1483,6 +1486,26 @@ $('ai-test').addEventListener('click', async () => {
     aiSettingsMessage(models.length ? `連線成功，取得 ${models.length} 個模型。${autoSelected ? '已優先選取建議模型；' : ''}請確認後儲存設定。` : '連線成功，但沒有可列舉的模型；可手動輸入模型 ID。');
   } catch (error) { if (error.name !== 'AbortError') aiSettingsMessage(`連線失敗：${error.message}`, true); }
   finally { aiTestAbort = null; $('ai-test').disabled = false; }
+});
+$('ai-test-response').addEventListener('click', async () => {
+  if (aiResponseTestAbort) return;
+  const config = currentAiConfig();
+  if (!config.key || !config.model) { aiSettingsMessage('請先輸入 API Key 並選擇模型。', true); return; }
+  const controller = new AbortController();
+  aiResponseTestAbort = controller;
+  $('ai-test-response').disabled = true;
+  aiSettingsMessage('正在送出測試訊息…');
+  try {
+    const reply = await generateText({ ...config, prompt: AI_RESPONSE_TEST_PROMPT, signal: controller.signal });
+    if (controller.signal.aborted) return;
+    const preview = reply.length > 160 ? `${reply.slice(0, 160)}…` : reply;
+    aiSettingsMessage(`模型回覆測試成功：${preview}`);
+  } catch (error) {
+    if (error.name !== 'AbortError') aiSettingsMessage(`模型回覆測試失敗：${error.message}`, true);
+  } finally {
+    aiResponseTestAbort = null;
+    $('ai-test-response').disabled = false;
+  }
 });
 $('ai-analyze').addEventListener('click', () => askAi(DEFAULT_ANALYSIS_QUESTION, { hideQuestion: true }));
 $('ai-example-organize').addEventListener('click', () => askAi('請整理「收藏的文獻清單」中各篇文獻摘要，按研究主題歸類，標示 PMID、主要發現與證據限制；缺少摘要的文獻請明確註明。', { requireSelection: true, requireCollection: true }));
