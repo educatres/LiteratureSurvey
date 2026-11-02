@@ -152,7 +152,7 @@ test('a suggested search analyzes the new results, not previously selected paper
   elements['ai-new-conversation'].dispatch('click');
   assert.equal(elements['ai-conversation'].children.length, 1);
   assert.match(elements['ai-conversation'].children[0].textContent, /選取文獻後開始整理/);
-  assert.equal(elements['ai-download'].disabled, false, 'starting a new conversation retains previous messages for export');
+  assert.equal(elements['ai-download'], undefined, 'the download conversation report button is removed');
   assert.equal(elements['results-round-tabs'].children.length, 3, 'starting a new conversation keeps search history');
   elements['ai-analyze'].dispatch('click');
   await waitFor(() => prompts.length === 4 && !elements['ai-send'].disabled);

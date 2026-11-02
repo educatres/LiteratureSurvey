@@ -1303,7 +1303,6 @@ function renderAiConversation() {
     if (message.role === 'user' && messages[index + 1]?.role === 'assistant') queryBlock = item;
     else container.append(item);
   }
-  $('ai-download').disabled = !aiConversation.some(message => message.role === 'assistant');
   renderNotebook();
 }
 function renderNotebook() {
@@ -1520,8 +1519,3 @@ $('ai-question').addEventListener('input', () => { if ($('ai-policy-warning').hi
 $('ai-cancel').addEventListener('click', () => aiAbort?.abort());
 $('ai-new-conversation').addEventListener('click', () => createNewChat());
 $('notebook-close').addEventListener('click', () => { $('notebook-menu').open = false; });
-$('ai-download').addEventListener('click', () => {
-  const report = aiConversation.filter(message => !isHiddenConversationQuestion(message)).map(message => `【${message.role === 'user' ? 'Query' : 'AI 研究助理'}】\n${message.content}${message.searchQuery ? `\n\n【建議的 PubMed 搜尋式】\n${message.searchQuery}` : ''}`).join('\n\n');
-  const url = URL.createObjectURL(new Blob([report], { type: 'text/plain;charset=utf-8' }));
-  const link = document.createElement('a'); link.href = url; link.download = 'litfetch-ai-report.txt'; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
-});
