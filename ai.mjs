@@ -63,27 +63,26 @@ function isTextModel(model) {
     || label.includes('nemotron') || label.includes('mistral') || label.includes('gpt-oss');
 }
 
-async function requestJson(url, options = {}, signal, timeoutMs = 30000) {
+async function requestJson(url, options = {}, signal) {
   const controller = new AbortController();
   let timedOut = false;
   const abortFromCaller = () => controller.abort();
   if (signal?.aborted) controller.abort();
   else signal?.addEventListener('abort', abortFromCaller, { once: true });
-  const timer = setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs);
+  const timer = setTimeout(() => { timedOut = true; controller.abort(); }, 240_000);
   let response;
+  let raw;
   try {
     response = await fetch(url, { ...options, signal: controller.signal, credentials: 'omit' });
+    raw = await response.text();
   } catch (error) {
-    if (error?.name === 'AbortError') {
-      if (!timedOut) throw error;
-    throw new Error('\u7121\u6cd5\u9023\u7dda\u5230\u0041\u0049\u0020\u670d\u52d9\u3001\u8acb\u6aa2\u67e5\u7db2\u8def\u9023\u7dda\u8207\u8def\u8207\u700f\u5668\u0043\u004f\u0052\u0053\u8a2d\u5b9a\u3002');
-    }
+    if (timedOut) throw new Error('AI API 請求逾時（240 秒），請重試。');
+    if (error?.name === 'AbortError') throw error;
     throw new Error('\u7121\u6cd5\u9023\u7dda\u5230\u0041\u0049\u0020\u670d\u52d9\u3001\u8acb\u6aa2\u67e5\u7db2\u8def\u9023\u7dda\u8207\u8def\u8207\u700f\u5668\u0043\u004f\u0052\u0053\u8a2d\u5b9a\u3002');
   } finally {
     clearTimeout(timer);
     signal?.removeEventListener('abort', abortFromCaller);
   }
-  const raw = await response.text();
   let body = {};
   try { body = raw ? JSON.parse(raw) : {}; } catch { body = { raw }; }
   if (!response.ok) {
@@ -178,7 +177,6 @@ export async function generateText({ provider, key, model, prompt, signal, maxOu
   let url;
   let headers;
   let payload;
-  let timeoutMs = 120000;
 
   if (provider === 'google' && !googleOpenAi) {
     url = `${base}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
@@ -204,7 +202,7 @@ export async function generateText({ provider, key, model, prompt, signal, maxOu
 
   const body = await requestJson(url, {
     method: 'POST', headers, body: JSON.stringify(payload)
-  }, signal, timeoutMs);
+  }, signal);
   const result = extractText(body);
   if (typeof result !== 'string' || !result.trim()) throw new Error('\u6a21\u578b\u6c92\u6709\u56de\u50b3\u53ef\u8b80\u53d6\u7684\u6587\u5b57\u3001\u8acb\u6aa2\u67e5\u6a21\u578b\u662f\u5426\u652f\u6301\u6587\u5b57\u751f\u6210\u3002');
   return result.trim();
