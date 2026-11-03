@@ -3,7 +3,7 @@ import { renderMarkdown } from './markdown.mjs';
 import { encodeWorkspace, decodeWorkspace, encodeProjectIndex, decodeProjectIndex } from './workspace.mjs';
 import { encodeProjectBackup, decodeProjectBackup, storeImportedProject, PROJECT_INDEX_STORAGE, PROJECT_WORKSPACE_PREFIX } from './project-backup.mjs';
 import { PAGE_SIZE, MAX_EXPORT, buildPubmedQuery, sortPapers, normalizeSummary, metadataCsv, fileStem, chunks } from './domain.mjs';
-import { PROVIDERS, CGU_MODEL_IDS, DEFAULT_CGU_MODEL, DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion, validateChatQuestion } from './ai.mjs?v=20261103-1';
+import { PROVIDERS, DEFAULT_CGU_MODEL, DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion, validateChatQuestion } from './ai.mjs?v=20261103-1';
 
 const NCBI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
 const EPMC = 'https://www.ebi.ac.uk/europepmc/webservices/rest';
@@ -1223,6 +1223,9 @@ function saveAiSettings() {
 function currentAiConfig() {
   return { provider: $('ai-provider').value, key: $('ai-key').value.trim(), model: $('ai-model').value.trim() };
 }
+function resetAiModelList() {
+  $('ai-model-list').replaceChildren(new Option('請先讀取模型', ''));
+}
 function loadAiProvider() {
   if (!['cgu', 'google'].includes($('ai-provider').value)) $('ai-provider').value = 'cgu';
   const provider = $('ai-provider').value;
@@ -1232,19 +1235,9 @@ function loadAiProvider() {
   const defaultModel = provider === 'cgu' ? DEFAULT_CGU_MODEL : provider === 'google' ? DEFAULT_GOOGLE_MODEL : '';
   // Migrate the earlier Google native-endpoint alias to the reference project's default.
   const savedModel = provider === 'google' && rawSavedModel === 'gemini-flash-latest' ? '' : rawSavedModel;
-  const isNewDefaultSelection = Boolean(defaultModel) && !savedModel;
   $('ai-key').value = typeof saved.key === 'string' ? saved.key : '';
   $('ai-model').value = savedModel || defaultModel;
-  if (provider === 'cgu') {
-    $('ai-model-list').replaceChildren(...CGU_MODEL_IDS.map(model => new Option(model, model)));
-    $('ai-model-list').value = savedModel ? (CGU_MODEL_IDS.includes(savedModel) ? savedModel : '') : DEFAULT_CGU_MODEL;
-  } else if (isNewDefaultSelection) {
-    const label = provider === 'google' ? `Gemini Flash Lite Latest (${DEFAULT_GOOGLE_MODEL})` : DEFAULT_CGU_MODEL;
-    $('ai-model-list').replaceChildren(new Option(label, defaultModel));
-    $('ai-model-list').value = defaultModel;
-  } else {
-    $('ai-model-list').replaceChildren(new Option('請先讀取模型', ''));
-  }
+  resetAiModelList();
   aiSettingsMessage('');
 }
 function updateAiScope() {
@@ -1444,6 +1437,7 @@ for (const id of WORKSPACE_FIELDS) {
 }
 globalThis.addEventListener?.('pagehide', () => { if (saveTimer) persistWorkspace(); });
 $('ai-provider').addEventListener('change', () => { aiTestAbort?.abort(); aiResponseTestAbort?.abort(); loadAiProvider(); });
+$('ai-key').addEventListener('input', () => { aiTestAbort?.abort(); resetAiModelList(); });
 $('ai-model-list').addEventListener('change', () => { if ($('ai-model-list').value) $('ai-model').value = $('ai-model-list').value; });
 $('ai-save').addEventListener('click', () => {
   const { provider, key, model } = currentAiConfig();
@@ -1456,30 +1450,23 @@ $('ai-clear').addEventListener('click', () => {
   aiResponseTestAbort?.abort();
   const provider = $('ai-provider').value;
   delete aiSettings.services[provider]; $('ai-key').value = ''; $('ai-model').value = '';
-  $('ai-model-list').replaceChildren(new Option('請先讀取模型', ''));
+  resetAiModelList();
   aiSettingsMessage(saveAiSettings() ? '已清除此服務儲存的 Key 與模型。' : '無法更新瀏覽器儲存空間，請檢查瀏覽器設定。');
 });
 $('ai-test').addEventListener('click', async () => {
   if (aiTestAbort) return;
   const { provider, key, model } = currentAiConfig();
   if (!key) { aiSettingsMessage('請先輸入 API Key。', true); return; }
+  resetAiModelList();
   const controller = new AbortController(); aiTestAbort = controller; $('ai-test').disabled = true; aiSettingsMessage('正在連線並讀取模型清單，請勿關閉視窗…');
   try {
     const models = await listModels(provider, key, controller.signal);
     if (controller.signal.aborted || $('ai-provider').value !== provider || $('ai-key').value.trim() !== key) return;
-    const defaultModel = provider === 'cgu' ? DEFAULT_CGU_MODEL : provider === 'google' ? DEFAULT_GOOGLE_MODEL : '';
-    const shouldPreferDefaultModel = Boolean(defaultModel) && model === defaultModel;
     const modelOptions = models.map(item => new Option(item.label === item.id ? item.id : `${item.label}（${item.id}）`, item.id));
-    if (shouldPreferDefaultModel && !models.some(item => item.id === defaultModel)) {
-      const label = provider === 'google' ? `Gemini Flash Lite Latest (${DEFAULT_GOOGLE_MODEL})` : DEFAULT_CGU_MODEL;
-      modelOptions.unshift(new Option(label, defaultModel));
-    }
     $('ai-model-list').replaceChildren(new Option('選擇模型', ''), ...modelOptions);
     let autoSelected = false;
     const preferred = preferredModel(provider, models);
-    if (shouldPreferDefaultModel) {
-      $('ai-model-list').value = defaultModel; $('ai-model').value = defaultModel; autoSelected = true;
-    } else if (preferred && !models.some(item => item.id === model)) {
+    if (preferred && !models.some(item => item.id === model)) {
       $('ai-model-list').value = preferred; $('ai-model').value = preferred; autoSelected = true;
     } else if (models.some(item => item.id === model)) {
       $('ai-model-list').value = model;
