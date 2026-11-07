@@ -3,7 +3,7 @@ import { renderMarkdown } from './markdown.mjs';
 import { encodeWorkspace, decodeWorkspace, encodeProjectIndex, decodeProjectIndex } from './workspace.mjs';
 import { encodeProjectBackup, decodeProjectBackup, storeImportedProject, PROJECT_INDEX_STORAGE, PROJECT_WORKSPACE_PREFIX } from './project-backup.mjs';
 import { PAGE_SIZE, MAX_EXPORT, buildPubmedQuery, sortPapers, normalizeSummary, metadataCsv, fileStem, chunks } from './domain.mjs';
-import { PROVIDERS, DEFAULT_CGU_MODEL, DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion, validateChatQuestion } from './ai.mjs?v=20261103-1';
+import { PROVIDERS, DEFAULT_CGU_MODEL, DEFAULT_GOOGLE_MODEL, listModels, preferredModel, generateText, buildAnalysisPrompt, extractSearchSuggestion, validateChatQuestion } from './ai.mjs?v=20261107-1';
 
 const NCBI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
 const EPMC = 'https://www.ebi.ac.uk/europepmc/webservices/rest';
@@ -725,7 +725,7 @@ const AI_STORAGE = 'litfetch.ai.settings.v1';
 let aiSettings = { provider: 'cgu', services: {} };
 try {
   const saved = JSON.parse(localStorage.getItem(AI_STORAGE) || '{}');
-  if (saved && typeof saved === 'object') aiSettings = { provider: ['cgu', 'google'].includes(saved.provider) ? saved.provider : 'cgu', services: saved.services && typeof saved.services === 'object' ? saved.services : {} };
+  if (saved && typeof saved === 'object') aiSettings = { provider: ['cgu', 'xai', 'google'].includes(saved.provider) ? saved.provider : 'cgu', services: saved.services && typeof saved.services === 'object' ? saved.services : {} };
 } catch { /* Storage may be blocked; settings can still be used in memory. */ }
 let aiConversation = [];
 let aiAbort = null;
@@ -1227,7 +1227,7 @@ function resetAiModelList() {
   $('ai-model-list').replaceChildren(new Option('請先讀取模型', ''));
 }
 function loadAiProvider() {
-  if (!['cgu', 'google'].includes($('ai-provider').value)) $('ai-provider').value = 'cgu';
+  if (!['cgu', 'xai', 'google'].includes($('ai-provider').value)) $('ai-provider').value = 'cgu';
   const provider = $('ai-provider').value;
   $('ai-base-url').textContent = PROVIDERS[provider].base;
   const saved = aiSettings.services[provider] || {};
