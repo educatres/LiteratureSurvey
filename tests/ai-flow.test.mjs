@@ -16,7 +16,7 @@ test('a suggested search analyzes the new results, not previously selected paper
     close() { this.open = false; this.dispatch('close'); }
   }
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
-  assert.match(html, /<option value="xai">Grok（xAI）<\/option>/, 'the Grok provider option is enabled');
+  assert.match(html, /<option value="xai" disabled>Grok（xAI）（尚未開放）<\/option>/, 'the Grok provider option remains disabled');
   const elements = Object.fromEntries([...html.matchAll(/\bid="([^"]+)"/g)].map(match => [match[1], new Element()]));
   elements['sort-by'].value = 'relevance';
   elements['ai-use-collection'].checked = true;
@@ -79,10 +79,8 @@ test('a suggested search analyzes the new results, not previously selected paper
   assert.equal(elements['ai-base-url'].textContent, 'https://generativelanguage.googleapis.com/v1beta/openai');
   elements['ai-provider'].value = 'xai';
   elements['ai-provider'].dispatch('change');
-  assert.equal(elements['ai-provider'].value, 'xai', 'Grok can be selected as an AI provider');
-  assert.equal(elements['ai-base-url'].textContent, 'https://api.x.ai/v1');
-  elements['ai-provider'].value = 'cgu';
-  elements['ai-provider'].dispatch('change');
+  assert.equal(elements['ai-provider'].value, 'cgu', 'disabled providers cannot be activated');
+  assert.equal(elements['ai-base-url'].textContent, 'https://air.cgu.edu.tw/cgullmapi/v1');
   for (const id of ['ai-analyze', 'ai-example-organize', 'ai-example-compare', 'ai-example-extend', 'ai-example-narrow']) {
     elements['ai-question'].value = '';
     elements[id].dispatch('click');

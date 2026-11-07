@@ -725,7 +725,7 @@ const AI_STORAGE = 'litfetch.ai.settings.v1';
 let aiSettings = { provider: 'cgu', services: {} };
 try {
   const saved = JSON.parse(localStorage.getItem(AI_STORAGE) || '{}');
-  if (saved && typeof saved === 'object') aiSettings = { provider: ['cgu', 'xai', 'google'].includes(saved.provider) ? saved.provider : 'cgu', services: saved.services && typeof saved.services === 'object' ? saved.services : {} };
+  if (saved && typeof saved === 'object') aiSettings = { provider: ['cgu', 'google'].includes(saved.provider) ? saved.provider : 'cgu', services: saved.services && typeof saved.services === 'object' ? saved.services : {} };
 } catch { /* Storage may be blocked; settings can still be used in memory. */ }
 let aiConversation = [];
 let aiAbort = null;
@@ -1227,7 +1227,7 @@ function resetAiModelList() {
   $('ai-model-list').replaceChildren(new Option('請先讀取模型', ''));
 }
 function loadAiProvider() {
-  if (!['cgu', 'xai', 'google'].includes($('ai-provider').value)) $('ai-provider').value = 'cgu';
+  if (!['cgu', 'google'].includes($('ai-provider').value)) $('ai-provider').value = 'cgu';
   const provider = $('ai-provider').value;
   $('ai-base-url').textContent = PROVIDERS[provider].base;
   const saved = aiSettings.services[provider] || {};
